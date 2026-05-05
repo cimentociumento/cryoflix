@@ -20,7 +20,7 @@ export const env = {
   refreshExpiresIn: getEnv('REFRESH_EXPIRES_IN', '7d') as StringValue,
   cdnBaseUrl: getEnv('CDN_BASE_URL', 'https://cdn.cryoflix.local'),
   tmdb: {
-    apiKey: getEnv('TMDB_API_KEY', ''),
+    apiKey: getEnv('TMDB_API_KEY', 'f99c004fcfba174823fb96e5b41ef707'),
     baseUrl: getEnv('TMDB_BASE_URL', 'https://api.themoviedb.org/3'),
   },
   superEmbed: {

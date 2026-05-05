@@ -61,7 +61,11 @@ Features principais:
 
 ## Variáveis de Ambiente
 
-Copie `backend/.env.example` (defina PORT, JWT, CDN etc). Para o front, use `VITE_API_URL` caso seu gateway não seja `http://localhost:4000/api`.
+Copie `backend/.env.example` (defina PORT, JWT, CDN etc).
+
+No frontend, o padrão agora é usar `/api` com proxy automático do Vite para `http://localhost:4000`, então não precisa configurar IP para rodar local em qualquer PC.
+
+Use `VITE_API_URL` apenas quando quiser apontar para uma API remota (deploy, túnel, servidor externo etc.).
 
 Integrações externas disponíveis exigem as chaves abaixo:
 

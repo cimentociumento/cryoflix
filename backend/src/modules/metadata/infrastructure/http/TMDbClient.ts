@@ -34,19 +34,6 @@ export type TMDbMovie = {
   external_ids?: TMDbExternalIds;
 };
 
-const mockMovies: TMDbMovie[] = [
-  {
-    id: 1,
-    title: 'Mocked Movie',
-    overview: 'Filme fictício para ambiente local.',
-    release_date: '2024-01-01',
-    poster_path: null,
-    backdrop_path: null,
-    vote_average: 8,
-    genre_ids: [12, 18],
-  },
-];
-
 export class TMDbClient {
   private readonly http = env.tmdb.apiKey
     ? HttpClient.create({
@@ -60,7 +47,7 @@ export class TMDbClient {
 
   constructor() {
     if (!env.tmdb.apiKey) {
-      logger.warn('TMDB_API_KEY não configurada - usando dados mock');
+      logger.error('TMDB_API_KEY não configurada');
     } else {
       logger.info('TMDb Client inicializado com API key');
     }
@@ -69,7 +56,8 @@ export class TMDbClient {
   async searchMovies(query: string, page: number): Promise<TMDbMovie[]> {
     const http = this.http;
     if (!http) {
-      return mockMovies;
+      logger.error('TMDb indisponível: API key ausente');
+      return [];
     }
     try {
       logger.debug({ query, page }, 'TMDb searchMovies: buscando filmes');
@@ -99,15 +87,12 @@ export class TMDbClient {
   async getMovieDetails(id: number): Promise<TMDbMovie | null> {
     const http = this.http;
     if (!http) {
-      return mockMovies.find((movie) => movie.id === id) ?? mockMovies[0];
+      logger.error({ id }, 'TMDb indisponível: API key ausente');
+      return null;
     }
     try {
       // Usar append_to_response para buscar external_ids (inclui IMDB ID)
       // Isso é importante para o SuperEmbed funcionar melhor
-      // A resposta vem com external_ids como um objeto aninhado
-      type MovieResponse = TMDbMovie & {
-        external_ids?: TMDbExternalIds;
-      };
       // Quando append_to_response é usado, a resposta vem com external_ids como objeto separado
       // A estrutura é: { id, title, ..., external_ids: { imdb_id, ... } }
       const response = await http.get<any>(`/movie/${id}`, {
@@ -158,7 +143,8 @@ export class TMDbClient {
   async getTrending(): Promise<TMDbMovie[]> {
     const http = this.http;
     if (!http) {
-      return mockMovies;
+      logger.error('TMDb indisponível: API key ausente');
+      return [];
     }
     try {
       const response = await http.get<TrendingResponse>('/trending/movie/day');
@@ -181,7 +167,8 @@ export class TMDbClient {
   async getRecommendations(id: number): Promise<TMDbMovie[]> {
     const http = this.http;
     if (!http) {
-      return mockMovies;
+      logger.error({ id }, 'TMDb indisponível: API key ausente');
+      return [];
     }
     try {
       const response = await http.get<RecommendationResponse>(`/movie/${id}/recommendations`);
