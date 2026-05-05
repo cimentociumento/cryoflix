@@ -12,5 +12,6 @@ export const userRoutes = Router();
 
 userRoutes.get('/me', authMiddleware, safeHandler(controller.me));
 userRoutes.patch('/me/preferences', authMiddleware, safeHandler(controller.updatePreferences));
+userRoutes.delete('/me', authMiddleware, safeHandler(controller.deleteMe));
 userRoutes.get('/:id/history', authMiddleware, safeHandler(controller.history));
 

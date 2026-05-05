@@ -14,5 +14,10 @@ export const userService = {
   async getHistory(userId: string) {
     return httpClient<{ history: UserProfile['history'] }>(`/users/${userId}/history`);
   },
+  async deleteMyAccount() {
+    return httpClient<void>('/users/me', {
+      method: 'DELETE',
+    });
+  },
 };
 

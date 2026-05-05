@@ -36,5 +36,16 @@ export class UserController {
     const history = await this.userService.getHistory(id);
     res.status(StatusCodes.OK).json({ history });
   };
+
+  deleteMe = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?.sub;
+    if (!userId) {
+      res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Usuário não autenticado' });
+      return;
+    }
+
+    await this.userService.deleteAccount(userId);
+    res.status(StatusCodes.NO_CONTENT).send();
+  };
 }
 

@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { metadataService } from '../../services/api/metadataService';
 import { VideoCard } from '../../components/VideoCard/VideoCard';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { Section } from '../../components/Section/Section';
+import { userService } from '../../services/api/userService';
+import { Button } from '../../shared/components/Button/Button';
 
 export const CatalogPage = () => {
   const [query, setQuery] = useState('');
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
 
   const lastWatchedMovieId = useMemo(() => {
     const first = user?.history?.[0];
@@ -27,6 +29,32 @@ export const CatalogPage = () => {
     queryKey: ['movies', 'search', query],
     queryFn: () => (query ? metadataService.search(query) : metadataService.getTrending()),
     enabled: true,
+  });
+
+  const hiddenMovieIds = useMemo(() => {
+    const raw = user?.preferences?.hiddenMovieIds;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((value) => Number(value))
+      .filter((id) => Number.isFinite(id) && id > 0);
+  }, [user?.preferences]);
+
+  const visibleMovies = useMemo(
+    () => movies.filter((movie) => !hiddenMovieIds.includes(movie.id)),
+    [movies, hiddenMovieIds],
+  );
+
+  const hideMovieMutation = useMutation({
+    mutationFn: async (movieId: number) => {
+      const nextHiddenIds = Array.from(new Set([...hiddenMovieIds, movieId]));
+      await userService.updatePreferences({
+        ...(user?.preferences ?? {}),
+        hiddenMovieIds: nextHiddenIds,
+      });
+    },
+    onSuccess: async () => {
+      await refreshProfile();
+    },
   });
 
   return (
@@ -67,10 +95,22 @@ export const CatalogPage = () => {
       ) : null}
       {isFetching ? <p>Carregando conteúdo...</p> : null}
       <div className="catalog-grid">
-        {movies.map((movie) => (
-          <VideoCard key={movie.id} video={movie} />
+        {visibleMovies.map((movie) => (
+          <div key={movie.id}>
+            <VideoCard video={movie} />
+            {user ? (
+              <Button
+                variant="secondary"
+                onClick={() => hideMovieMutation.mutate(movie.id)}
+                disabled={hideMovieMutation.isPending}
+                style={{ width: '100%', marginTop: '0.4rem' }}
+              >
+                Não tenho interesse
+              </Button>
+            ) : null}
+          </div>
         ))}
-        {!movies.length && !isFetching ? (
+        {!visibleMovies.length && !isFetching ? (
           <p>{query ? 'Nenhum filme encontrado. Tente outra busca.' : 'Digite um termo para buscar filmes.'}</p>
         ) : null}
       </div>

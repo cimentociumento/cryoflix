@@ -55,6 +55,25 @@ export class InMemoryUserRepository implements IUserRepository {
     return user;
   }
 
+  async delete(id: string): Promise<void> {
+    const deleted = this.db.users.delete(id);
+    if (!deleted) {
+      throw new NotFoundError('Usuário', id);
+    }
+
+    for (const [key, progress] of this.db.watchProgress.entries()) {
+      if (progress.userId === id) {
+        this.db.watchProgress.delete(key);
+      }
+    }
+
+    for (const [key, subscription] of this.db.subscriptions.entries()) {
+      if (subscription.userId === id) {
+        this.db.subscriptions.delete(key);
+      }
+    }
+  }
+
   async list(): Promise<User[]> {
     return Array.from(this.db.users.values()).map((record) => this.mapRecordToEntity(record));
   }

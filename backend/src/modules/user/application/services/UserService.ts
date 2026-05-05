@@ -31,5 +31,14 @@ export class UserService {
 
     return user.history;
   }
+
+  async deleteAccount(userId: string) {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError('Usuário', userId);
+    }
+
+    await this.userRepository.delete(userId);
+  }
 }
 
