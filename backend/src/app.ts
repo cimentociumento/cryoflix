@@ -1,6 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJsdoc from 'swagger-jsdoc';
+import { swaggerOptions } from './shared/docs/swagger.config';
 import { StatusCodes } from 'http-status-codes';
 import { ZodError, ZodIssue } from 'zod';
 import { apiRouter } from './routes';
@@ -15,9 +19,24 @@ import { HttpClientError } from './shared/infrastructure/http/HttpClientError';
 export const createApp = () => {
   const app = express();
 
-  app.use(cors());
+  app.use(
+    cors({
+      origin: true,
+      credentials: true,
+    }),
+  );
   app.use(helmet());
+  app.use(cookieParser());
   app.use(express.json({ limit: '10mb' }));
+
+  const swaggerDocs = swaggerJsdoc(swaggerOptions);
+  app.use(
+    '/api/docs',
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerDocs, {
+      customSiteTitle: 'CryoFlix API Docs',
+    }),
+  );
 
   app.get('/health', (_req, res) => {
     res.status(StatusCodes.OK).json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -54,7 +73,10 @@ export const createApp = () => {
     }
 
     if (err instanceof UnauthorizedError) {
-      res.status(Http.UNAUTHORIZED).json({ message: err.message });
+      res.status(Http.UNAUTHORIZED).json({
+        message: err.message,
+        ...(err.code ? { code: err.code } : {}),
+      });
       return;
     }
 

@@ -23,6 +23,18 @@ export class UserService {
     return updated.toSafeJSON();
   }
 
+  async updateProfile(
+    userId: string,
+    partial: { displayName?: string | null; bio?: string | null; avatarUrl?: string | null },
+  ) {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError('Usuário', userId);
+    }
+    const updated = await this.userRepository.update(user.withProfile(partial));
+    return updated.toSafeJSON();
+  }
+
   async getHistory(userId: string) {
     const user = await this.userRepository.findById(userId);
     if (!user) {

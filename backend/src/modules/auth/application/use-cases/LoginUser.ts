@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { IUserRepository } from '../../domain/repositories/IUserRepository';
 import { Email } from '../../domain/value-objects/Email';
-import { ValidationError } from '../../../../shared/domain/errors/ValidationError';
+import { UnauthorizedError } from '../../../../shared/domain/errors/UnauthorizedError';
 import { ITokenService, TokenPair } from '../services/ITokenService';
 import { LoginUserDTO } from '../dtos/LoginUserDTO';
 
@@ -10,6 +10,8 @@ export type LoginResult = TokenPair & {
     id: string;
     email: string;
     name: string;
+    username: string;
+    role: string;
     roles: string[];
   };
 };
@@ -25,29 +27,66 @@ export class LoginUserUseCase {
     const user = await this.userRepository.findByEmail(email);
 
     if (!user) {
-      throw new ValidationError('Credenciais inválidas');
+      throw new UnauthorizedError('Credenciais inválidas');
+    }
+
+    if (user.deletedAt) {
+      throw new UnauthorizedError('Conta não encontrada');
+    }
+
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      const minutes = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
+      throw new UnauthorizedError(`Conta bloqueada. Tente novamente em ${minutes} minuto(s).`);
+    }
+
+    if (user.status === 'SUSPENDED') {
+      throw new UnauthorizedError('Conta suspensa. Entre em contato com o suporte.');
+    }
+    if (user.status === 'BANNED') {
+      throw new UnauthorizedError('Conta banida permanentemente.');
+    }
+    if (user.status === 'PENDING_VERIFICATION') {
+      throw new UnauthorizedError(
+        'Verifique seu e-mail antes de fazer login.',
+        'EMAIL_NOT_VERIFIED',
+      );
     }
 
     const isValidPassword = await bcrypt.compare(dto.password, user.passwordHash);
 
     if (!isValidPassword) {
-      throw new ValidationError('Credenciais inválidas');
+      const failed = user.failedLoginAttempts + 1;
+      const lockedUntil =
+        failed >= 5 ? new Date(Date.now() + 30 * 60 * 1000) : user.lockedUntil;
+      await this.userRepository.update(user.patch({ failedLoginAttempts: failed, lockedUntil }));
+      throw new UnauthorizedError('Credenciais inválidas');
     }
 
+    const loggedIn = await this.userRepository.update(
+      user.patch({
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastLoginAt: new Date(),
+      }),
+    );
+
     const tokens = this.tokenService.generateTokens({
-      sub: user.id,
-      roles: user.roles,
+      sub: loggedIn.id,
+      email: loggedIn.email,
+      role: loggedIn.role,
+      roles: loggedIn.roles,
     });
 
     return {
       ...tokens,
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        roles: user.roles,
+        id: loggedIn.id,
+        email: loggedIn.email,
+        name: loggedIn.name,
+        username: loggedIn.username,
+        role: loggedIn.role,
+        roles: loggedIn.roles,
       },
     };
   }
 }
-

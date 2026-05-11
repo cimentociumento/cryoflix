@@ -5,9 +5,15 @@ import { CatalogPage } from '../pages/Catalog/CatalogPage';
 import { WatchPage } from '../pages/Watch/WatchPage';
 import { AccountPage } from '../pages/Account/AccountPage';
 import { SuperFlixPlayerPage } from '../pages/SuperFlixPlayer/SuperFlixPlayerPage';
+import { VerifyEmailPage } from '../pages/VerifyEmail/VerifyEmailPage';
+import { ForgotPasswordPage } from '../pages/ForgotPassword/ForgotPasswordPage';
+import { ResetPasswordPage } from '../pages/ResetPassword/ResetPasswordPage';
 
 export const AppRoutes = () => (
   <Routes>
+    <Route path="/verify-email" element={<VerifyEmailPage />} />
+    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    <Route path="/reset-password" element={<ResetPasswordPage />} />
     <Route element={<AppLayout />}>
       <Route index element={<HomePage />} />
       <Route path="catalog" element={<CatalogPage />} />

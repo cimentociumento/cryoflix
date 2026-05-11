@@ -12,6 +12,7 @@ import { notificationRoutes } from '../modules/notification/presentation/routes/
 import { movieRoutes } from '../modules/metadata/presentation/routes/movieRoutes';
 import { playerRoutes } from '../modules/player/presentation/routes/playerRoutes';
 import { subtitleRoutes } from '../modules/subtitle/presentation/routes/subtitleRoutes';
+import { adminRoutes } from '../modules/admin/presentation/routes/adminRoutes';
 
 export const apiRouter = Router();
 
@@ -28,4 +29,5 @@ apiRouter.use('/notifications', notificationRoutes);
 apiRouter.use('/metadata', movieRoutes);
 apiRouter.use('/player', playerRoutes);
 apiRouter.use('/subtitles', subtitleRoutes);
+apiRouter.use('/admin', adminRoutes);
 

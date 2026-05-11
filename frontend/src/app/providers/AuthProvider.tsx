@@ -13,6 +13,7 @@ import type { UserProfile } from '../../shared/types';
 type AuthContextValue = {
   user: UserProfile | null;
   loading: boolean;
+  isAdmin: boolean;
   login: (credentials: { email: string; password: string }) => Promise<void>;
   register: (payload: { email: string; password: string; name: string }) => Promise<void>;
   logout: () => void;
@@ -93,16 +94,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await fetchProfile();
   }, [fetchProfile]);
 
+  const isAdmin = user?.role === 'ADMIN';
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       loading,
+      isAdmin,
       login,
       register,
       logout,
       refreshProfile,
     }),
-    [user, loading, login, register, logout, refreshProfile],
+    [user, loading, isAdmin, login, register, logout, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

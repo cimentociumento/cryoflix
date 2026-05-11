@@ -13,7 +13,14 @@ export type UserProfile = {
   id: string;
   email: string;
   name: string;
+  username?: string;
+  displayName?: string | null;
+  bio?: string | null;
+  avatarUrl?: string | null;
+  role?: 'USER' | 'ADMIN';
   roles: string[];
+  status?: string;
+  emailVerified?: boolean;
   preferences: Record<string, unknown>;
   history: Array<{ videoId: string; watchedAt: string; progress: number }>;
 };

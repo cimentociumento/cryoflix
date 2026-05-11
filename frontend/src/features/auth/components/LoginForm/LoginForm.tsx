@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '../../../../shared/components/Button/Button';
 import { useAuth } from '../../../../app/providers/AuthProvider';
 
-const MIN_PASSWORD_LENGTH = 10;
+const MIN_PASSWORD_LENGTH = 8;
 
 export const LoginForm = () => {
   const { login, register } = useAuth();
@@ -15,10 +16,13 @@ export const LoginForm = () => {
 
   const validatePassword = (value: string) => {
     if (value.length < MIN_PASSWORD_LENGTH) {
-      return 'A senha deve ter pelo menos 10 caracteres.';
+      return `A senha deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`;
     }
     if (!/[A-Z]/.test(value) || !/[a-z]/.test(value) || !/[0-9]/.test(value)) {
       return 'Use letras maiúsculas, minúsculas e números.';
+    }
+    if (!/[!@#$%^&*]/.test(value)) {
+      return 'Inclua um caractere especial: !@#$%^&*';
     }
     return null;
   };
@@ -105,10 +109,15 @@ export const LoginForm = () => {
         />
         {mode === 'register' ? (
           <small className="status">
-            A senha deve ter pelo menos 10 caracteres, com letras maiúsculas, minúsculas e números.
+            Mínimo 8 caracteres, maiúscula, minúscula, número e um de: !@#$%^&*
           </small>
         ) : null}
       </div>
+      {mode === 'login' ? (
+        <p className="field" style={{ marginTop: 0 }}>
+          <Link to="/forgot-password">Esqueci minha senha</Link>
+        </p>
+      ) : null}
       <Button type="submit" disabled={status === 'loading'}>
         {status === 'loading' ? 'Carregando...' : mode === 'login' ? 'Entrar' : 'Registrar'}
       </Button>

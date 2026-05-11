@@ -39,6 +39,19 @@ export const env = {
     username: getEnv('REDIS_USERNAME', 'default'),
     tlsEnabled: getEnv('REDIS_TLS_ENABLED', 'false') === 'true',
     tlsRejectUnauthorized: getEnv('REDIS_TLS_REJECT_UNAUTHORIZED', 'true') === 'true',
+    url: getEnv('REDIS_URL', 'redis://localhost:6379'),
+  },
+  smtp: {
+    host: getEnv('SMTP_HOST', ''),
+    port: Number(getEnv('SMTP_PORT', '587')),
+    user: getEnv('SMTP_USER', ''),
+    pass: getEnv('SMTP_PASS', ''),
+  },
+  frontendUrl: getEnv('FRONTEND_URL', 'http://localhost:5173'),
+  adminUrl: getEnv('ADMIN_URL', 'http://localhost:5174'),
+  apiUrl: getEnv('API_URL', 'http://localhost:4000'),
+  adminSeed: {
+    email: getEnv('ADMIN_EMAIL', 'admin@cryoflix.io'),
+    password: getEnv('ADMIN_PASSWORD', 'Admin@CryoFlix2024!'),
   },
 };
-

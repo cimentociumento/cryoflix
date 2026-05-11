@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { LoginForm } from '../../features/auth/components/LoginForm/LoginForm';
 import { userService } from '../../services/api/userService';
@@ -8,8 +9,18 @@ import { metadataService } from '../../services/api/metadataService';
 import { Section } from '../../components/Section/Section';
 import { VideoCard } from '../../components/VideoCard/VideoCard';
 
+const adminUrl = import.meta.env.VITE_ADMIN_URL as string | undefined;
+
 export const AccountPage = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const location = useLocation();
+  const [resetBanner, setResetBanner] = useState(false);
+
+  useEffect(() => {
+    if ((location.state as { resetOk?: boolean } | null)?.resetOk) {
+      setResetBanner(true);
+    }
+  }, [location.state]);
 
   if (!user) {
     return (
@@ -23,6 +34,11 @@ export const AccountPage = () => {
 
   return (
     <div className="page-stack">
+      {resetBanner ? (
+        <p className="status success" style={{ marginTop: 0 }}>
+          Senha alterada com sucesso. Faça login novamente se necessário.
+        </p>
+      ) : null}
       <header className="account-header">
         <div>
           <h1>{user.name}</h1>
@@ -31,9 +47,67 @@ export const AccountPage = () => {
         <span className="badge badge-stable">{user.roles.join(', ')}</span>
       </header>
 
+      {isAdmin && adminUrl ? (
+        <p>
+          <a href={adminUrl} target="_blank" rel="noreferrer">
+            Painel Admin
+          </a>
+        </p>
+      ) : null}
+
+      <ProfileSection
+        initialDisplayName={user.displayName ?? user.name}
+        initialBio={user.bio ?? ''}
+      />
+
       <AccountHistory userId={user.id} />
       <PreferencesForm initialPreferences={user.preferences} />
     </div>
+  );
+};
+
+const ProfileSection = ({
+  initialDisplayName,
+  initialBio,
+}: {
+  initialDisplayName: string;
+  initialBio: string;
+}) => {
+  const [displayName, setDisplayName] = useState(initialDisplayName);
+  const [bio, setBio] = useState(initialBio);
+  const { refreshProfile } = useAuth();
+  const client = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: () => userService.updateProfile({ displayName, bio: bio || null }),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ['profile'] });
+      void refreshProfile();
+    },
+  });
+
+  return (
+    <form
+      className="preferences-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        mutation.mutate();
+      }}
+    >
+      <h3>Perfil</h3>
+      <label>
+        Nome de exibição
+        <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+      </label>
+      <label>
+        Bio
+        <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} />
+      </label>
+      <Button type="submit" disabled={mutation.isLoading}>
+        {mutation.isLoading ? 'Salvando...' : 'Salvar perfil'}
+      </Button>
+      {mutation.isSuccess ? <span className="status success">Perfil atualizado!</span> : null}
+    </form>
   );
 };
 

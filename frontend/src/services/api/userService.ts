@@ -11,6 +11,17 @@ export const userService = {
       body: JSON.stringify({ preferences }),
     });
   },
+
+  async updateProfile(payload: {
+    displayName?: string | null;
+    bio?: string | null;
+    avatarUrl?: string | null;
+  }) {
+    return httpClient<UserProfile>('/users/me/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  },
   async getHistory(userId: string) {
     return httpClient<{ history: UserProfile['history'] }>(`/users/${userId}/history`);
   },

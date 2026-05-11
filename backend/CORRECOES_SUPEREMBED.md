@@ -23,7 +23,7 @@ O erro "file not found" no player foi causado por:
 - **Com IMDB ID**: `https://multiembed.mov/directstream.php?video_id=tt0137523`
 - **Sem IMDB ID**: `https://multiembed.mov/?video_id=550&tmdb=1`
 
-### 2. UrlValidator.ts
+### 2. UrlValidator
 
 **Mudanças**:
 - ✅ Adicionado `getsuperembed.link` aos hosts permitidos

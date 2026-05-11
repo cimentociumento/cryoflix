@@ -4,11 +4,26 @@ import { hashSync } from 'bcryptjs';
 export type UserRecord = {
   id: string;
   email: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
   passwordHash: string;
-  name: string;
-  roles: string[];
+  role: 'USER' | 'ADMIN';
+  status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'SUSPENDED' | 'BANNED';
+  emailVerified: boolean;
+  emailVerifyToken: string | null;
+  emailVerifyExpires: Date | null;
+  passwordResetToken: string | null;
+  passwordResetExpires: Date | null;
+  failedLoginAttempts: number;
+  lockedUntil: Date | null;
+  lastLoginAt: Date | null;
+  deletedAt: Date | null;
   preferences: Record<string, unknown>;
   history: Array<{ videoId: string; watchedAt: Date; progress: number }>;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 export type VideoRecord = {
@@ -64,15 +79,29 @@ export class InMemoryDatabase {
     this.users.set(userId, {
       id: userId,
       email: 'demo@fflix.io',
+      username: 'demo_legacy',
+      displayName: 'Demo User',
+      avatarUrl: null,
+      bio: null,
       passwordHash: hashSync('Sup3rSecret!', 10),
-      name: 'Demo User',
-      roles: ['viewer'],
+      role: 'USER',
+      status: 'ACTIVE',
+      emailVerified: true,
+      emailVerifyToken: null,
+      emailVerifyExpires: null,
+      passwordResetToken: null,
+      passwordResetExpires: null,
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+      lastLoginAt: null,
+      deletedAt: null,
       preferences: { language: 'pt-BR', theme: 'light' },
       history: [
-        // Para integrar com o catálogo TMDb, usamos IDs numéricos como string.
         { videoId: '550', watchedAt: now, progress: 0.8 },
         { videoId: '680', watchedAt: now, progress: 0.5 },
       ],
+      createdAt: now,
+      updatedAt: now,
     });
 
     this.videos.set(videoId, {
@@ -94,4 +123,3 @@ export class InMemoryDatabase {
     });
   }
 }
-

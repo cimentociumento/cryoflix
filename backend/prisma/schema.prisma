@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum AccountStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+model User {
+  id                    String        @id @default(uuid())
+  email                 String        @unique
+  username              String        @unique
+  passwordHash          String
+  role                  Role          @default(USER)
+  status                AccountStatus @default(PENDING_VERIFICATION)
+
+  // Perfil (alinhado com o UserProfile já existente no domain)
+  displayName           String?
+  avatarUrl             String?
+  bio                   String?
+  preferences           Json? // mantém compatibilidade com UserPreferences existente
+
+  // Watch progress (migrado do InMemoryDatabase watchProgress Map)
+  watchProgress         WatchProgress[]
+
+  // Verificação de e-mail
+  emailVerified         Boolean       @default(false)
+  emailVerifyToken      String?       @unique
+  emailVerifyExpires    DateTime?
+
+  // Reset de senha
+  passwordResetToken    String?       @unique
+  passwordResetExpires  DateTime?
+
+  // Controle de acesso / segurança
+  lastLoginAt           DateTime?
+  failedLoginAttempts   Int           @default(0)
+  lockedUntil           DateTime?
+
+  // Assinatura (migrado do InMemoryDatabase)
+  subscription          Subscription?
+
+  // Timestamps
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  deletedAt             DateTime? // soft delete
+
+  // Relações
+  refreshTokens         RefreshToken[]
+  auditLogs             AuditLog[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id          String    @id @default(uuid())
+  token       String    @unique
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+  userAgent   String?
+  ipAddress   String?
+
+  @@map("refresh_tokens")
+}
+
+model Subscription {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan      String   @default("free") // "free", "basic", "premium"
+  status    String   @default("active")
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("subscriptions")
+}
+
+model WatchProgress {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movieId     String // TMDb movie ID (string)
+  progress    Float    @default(0) // porcentagem 0-100
+  timestamp   Int      @default(0) // segundos
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, movieId])
+  @@map("watch_progress")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action      String // LOGIN, REGISTER, LOGOUT, ROLE_CHANGE, STATUS_CHANGE, USER_DELETE
+  entity      String?
+  entityId    String?
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@map("audit_logs")
+}
