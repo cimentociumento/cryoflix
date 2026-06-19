@@ -1,0 +1,131 @@
+services:
+  # ─── PostgreSQL ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: cryoflix-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cryoflix}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cryoflix123}
+      POSTGRES_DB: ${POSTGRES_DB:-cryoflix}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cryoflix-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cryoflix} -d ${POSTGRES_DB:-cryoflix}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ─── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: cryoflix-redis
+    restart: unless-stopped
+    # --protected-mode no: necessary for Docker internal network connections
+    # (protected-mode blocks non-loopback connections when no password is set)
+    command: redis-server /usr/local/etc/redis/redis.conf --protected-mode no
+    volumes:
+      - redis_data:/data
+      - ./infrastructure/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - cryoflix-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ─── Backend (Express + TypeScript + Prisma) ─────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: cryoflix-backend:latest
+    container_name: cryoflix-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      # Prisma / PostgreSQL
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cryoflix}:${POSTGRES_PASSWORD:-cryoflix123}@postgres:5432/${POSTGRES_DB:-cryoflix}?schema=public
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret-min-32-chars-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      REFRESH_SECRET: ${REFRESH_SECRET:-change-this-refresh-secret-min-32-chars}
+      REFRESH_EXPIRES_IN: ${REFRESH_EXPIRES_IN:-7d}
+      # TMDb
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      # Redis
+      REDIS_ENABLED: "true"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      # SMTP (optional — leave blank for console-only email)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      # App URLs (used in email links)
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      ADMIN_URL: ${ADMIN_URL:-http://localhost:3001}
+      API_URL: ${API_URL:-http://backend:4000}
+      # OpenSubtitles (optional)
+      OPENSUBTITLES_API_KEY: ${OPENSUBTITLES_API_KEY:-}
+      # Admin seed credentials
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@cryoflix.io}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@CryoFlix2024!}
+    ports:
+      - "4000:4000"
+    networks:
+      - cryoflix-net
+
+  # ─── Frontend (React + Vite → nginx) ────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: cryoflix-frontend:latest
+    container_name: cryoflix-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - cryoflix-net
+
+  # ─── Admin Panel (React + Vite + Tailwind → nginx) ───────────────────────────
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    image: cryoflix-admin:latest
+    container_name: cryoflix-admin
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3001:80"
+    networks:
+      - cryoflix-net
+
+# ─── Volumes ──────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# ─── Networks ─────────────────────────────────────────────────────────────────
+networks:
+  cryoflix-net:
+    driver: bridge
