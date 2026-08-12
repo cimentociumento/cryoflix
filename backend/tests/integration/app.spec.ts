@@ -174,5 +174,43 @@ describe('FFlix API', () => {
       .send({ jobId });
     expect(ownerResponse.status).toBe(200);
   });
+
+  it('validates body on transcoding jobs and notification endpoints', async () => {
+    const user = await registerVerifyLogin('validation');
+    const auth = { Authorization: `Bearer ${user.accessToken}` };
+
+    const invalidTranscoding = await request(app)
+      .post('/api/transcoding/jobs')
+      .set(auth)
+      .send({});
+    expect(invalidTranscoding.status).toBe(400);
+
+    const validTranscoding = await request(app)
+      .post('/api/transcoding/jobs')
+      .set(auth)
+      .send({ uploadJobId: 'job-123' });
+    expect(validTranscoding.status).toBe(202);
+
+    const invalidEmail = await request(app)
+      .post('/api/notifications/email')
+      .set(auth)
+      .send({ to: 'not-an-email', subject: 'Oi', body: 'Corpo' });
+    expect(invalidEmail.status).toBe(400);
+
+    const validEmail = await request(app)
+      .post('/api/notifications/email')
+      .set(auth)
+      .send({ to: 'user@example.com', subject: 'Oi', body: 'Corpo' });
+    expect(validEmail.status).toBe(202);
+
+    const invalidPush = await request(app).post('/api/notifications/push').set(auth).send({});
+    expect(invalidPush.status).toBe(400);
+
+    const validPush = await request(app)
+      .post('/api/notifications/push')
+      .set(auth)
+      .send({ token: 'device-token', message: 'Oi' });
+    expect(validPush.status).toBe(202);
+  });
 });
 
