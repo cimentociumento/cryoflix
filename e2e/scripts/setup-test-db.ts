@@ -1,4 +1,5 @@
 import { execFileSync } from 'child_process';
+import { existsSync } from 'fs';
 import path from 'path';
 import { Client } from 'pg';
 
@@ -40,6 +41,19 @@ async function ensureDatabaseExists(testDatabaseUrl: string): Promise<void> {
 }
 
 function runPrismaGenerate(): void {
+  // `prisma generate` overwrites the native query-engine binary in
+  // node_modules/.prisma/client. On Windows that file is memory-mapped by any
+  // process that has already `require()`d @prisma/client (e.g. the backend
+  // webServer, which Playwright always starts before running globalSetup —
+  // see e2e/playwright.config.ts), and Windows refuses to rename over a
+  // loaded module (EPERM). @prisma/client's own postinstall hook already
+  // generates the client on `npm install`, so skip the regenerate here when
+  // it's already present; delete backend/node_modules/.prisma to force a
+  // fresh generate after a schema change.
+  const generatedClientEntry = path.join(BACKEND_DIR, 'node_modules', '.prisma', 'client', 'index.js');
+  if (existsSync(generatedClientEntry)) {
+    return;
+  }
   execFileSync('npx', ['prisma', 'generate'], {
     cwd: BACKEND_DIR,
     stdio: 'inherit',
