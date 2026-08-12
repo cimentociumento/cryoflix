@@ -4,6 +4,21 @@ import { container } from '../../src/shared/container';
 
 const app = createApp();
 
+async function registerVerifyLogin(label: string) {
+  const email = `test+${label}+${Date.now()}@fflix.io`;
+  const password = 'Sup3rSecret!';
+  await request(app).post('/api/auth/register').send({ email, password, name: label });
+  const registeredUser = await container.userRepository.findByEmail(email);
+  await request(app)
+    .get('/api/auth/verify-email')
+    .query({ token: registeredUser?.emailVerifyToken });
+  const loginResponse = await request(app).post('/api/auth/login').send({ email, password });
+  return {
+    accessToken: loginResponse.body.accessToken as string,
+    userId: loginResponse.body.user.id as string,
+  };
+}
+
 describe('FFlix API', () => {
   it('responds to health check', async () => {
     const response = await request(app).get('/health');
@@ -66,21 +81,11 @@ describe('FFlix API', () => {
   });
 
   it('rejects a non-admin user creating content', async () => {
-    const email = `test+${Date.now()}@fflix.io`;
-    const password = 'Sup3rSecret!';
-
-    await request(app).post('/api/auth/register').send({ email, password, name: 'Tester' });
-
-    const registeredUser = await container.userRepository.findByEmail(email);
-    const verifyToken = registeredUser?.emailVerifyToken;
-    await request(app).get('/api/auth/verify-email').query({ token: verifyToken });
-
-    const loginResponse = await request(app).post('/api/auth/login').send({ email, password });
-    const accessToken = loginResponse.body.accessToken as string;
+    const user = await registerVerifyLogin('content');
 
     const createResponse = await request(app)
       .post('/api/content')
-      .set('Authorization', `Bearer ${accessToken}`)
+      .set('Authorization', `Bearer ${user.accessToken}`)
       .send({
         title: 'Filme de teste',
         description: 'Descrição com mais de dez caracteres',
@@ -91,27 +96,30 @@ describe('FFlix API', () => {
   });
 
   it('rejects requesting recommendations for another user id', async () => {
-    const registerAndLogin = async (label: string) => {
-      const email = `test+${label}+${Date.now()}@fflix.io`;
-      const password = 'Sup3rSecret!';
-      await request(app).post('/api/auth/register').send({ email, password, name: label });
-      const registeredUser = await container.userRepository.findByEmail(email);
-      await request(app)
-        .get('/api/auth/verify-email')
-        .query({ token: registeredUser?.emailVerifyToken });
-      const loginResponse = await request(app).post('/api/auth/login').send({ email, password });
-      return {
-        accessToken: loginResponse.body.accessToken as string,
-        userId: loginResponse.body.user.id as string,
-      };
-    };
-
-    const userA = await registerAndLogin('usera');
-    const userB = await registerAndLogin('userb');
+    const userA = await registerVerifyLogin('usera');
+    const userB = await registerVerifyLogin('userb');
 
     const response = await request(app)
       .get(`/api/recommendations/${userA.userId}`)
       .set('Authorization', `Bearer ${userB.accessToken}`);
+
+    expect(response.status).toBe(403);
+  });
+
+  it('rejects unauthenticated access to analytics', async () => {
+    const metricsResponse = await request(app).get('/api/analytics/metrics');
+    expect(metricsResponse.status).toBe(401);
+
+    const eventsResponse = await request(app).post('/api/analytics/events').send({ event: 'test' });
+    expect(eventsResponse.status).toBe(401);
+  });
+
+  it('rejects a non-admin user reading analytics metrics', async () => {
+    const user = await registerVerifyLogin('analytics');
+
+    const response = await request(app)
+      .get('/api/analytics/metrics')
+      .set('Authorization', `Bearer ${user.accessToken}`);
 
     expect(response.status).toBe(403);
   });
