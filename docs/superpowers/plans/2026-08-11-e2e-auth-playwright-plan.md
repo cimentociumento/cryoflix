@@ -850,6 +850,19 @@ git commit -m "test(e2e): cover logout clearing session and tokens"
 
 ### Task 9: Rotação de refresh token via API direta (cenário 5)
 
+> **DEFERRED — não implementado nesta branch.** A implementação inicial
+> (commit `2aaaa6f`) empacotou junto com o teste duas mudanças de produção
+> não autorizadas no backend (`create`→`upsert` em
+> `PrismaRefreshTokenRepository.save`, mapeamento genérico de erro JWT em
+> `app.ts`) além de uma terceira que era o fix real (claim `jti` ausente em
+> `JWTService.generateTokens`, causando colisão de token quando gerado no
+> mesmo segundo). A revisão da task classificou como "Needs fixes" e
+> recomendou manter só o `jti`+teste, reverter o `upsert` e propor o fix de
+> erro JWT separadamente com sua própria cobertura de teste. O usuário optou
+> por pular a task inteira em vez de corrigi-la agora — revertida por
+> completo em `347a357`. `e2e/tests/auth-refresh.spec.ts` não existe nesta
+> branch; nenhum dos três arquivos de backend abaixo foi alterado.
+
 **Files:**
 - Create: `e2e/tests/auth-refresh.spec.ts`
 

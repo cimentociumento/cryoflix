@@ -13,7 +13,10 @@ test('logout limpa a sessão e volta ao formulário de login', async ({ page, re
   await expectFormError(page, 'Verifique seu e-mail antes de fazer login.');
 
   const verifyToken = await getEmailVerifyToken(user.email);
-  await request.get(`/api/auth/verify-email?token=${encodeURIComponent(verifyToken)}`);
+  const verifyResponse = await request.get(
+    `/api/auth/verify-email?token=${encodeURIComponent(verifyToken)}`,
+  );
+  expect(verifyResponse.ok()).toBeTruthy();
 
   await switchToLoginMode(page);
   await submitLoginForm(page, user);

@@ -33,6 +33,15 @@ há gatilho de UI para isso hoje, confirmado em `INVENTARIO.md`):
 
 5. `POST /api/auth/refresh` rotaciona o refresh token corretamente.
 
+> **Adiado (não implementado nesta branch):** implementar o cenário 5 exigia
+> corrigir um bug real de geração de JWT no backend (tokens sem `jti`, logo
+> não únicos quando gerados no mesmo segundo), e a tentativa inicial também
+> incluiu duas mudanças de produção não solicitadas e arriscadas
+> (`create`→`upsert` no `PrismaRefreshTokenRepository`, mapeamento genérico
+> de erro JWT). Revertido por completo em `347a357` a pedido do usuário —
+> ver `docs/superpowers/plans/2026-08-11-e2e-auth-playwright-plan.md` (Task 9)
+> para o histórico. `e2e/tests/auth-refresh.spec.ts` não existe nesta branch.
+
 Fora de escopo desta fase: rotas `/api/admin/*`, `/api/content`, e as
 inconsistências de autorização listadas em `INVENTARIO.md` (ex:
 `/users/:id/history`). Ficam para uma fase futura.
@@ -118,8 +127,8 @@ e2e/
     health.spec.ts
     auth-register-login.spec.ts
     auth-invalid-cases.spec.ts   # e-mail não verificado, senha errada
-    auth-refresh.spec.ts         # API direta
     auth-logout.spec.ts
+    # auth-refresh.spec.ts não existe — cenário 5 adiado, ver nota na Escopo
 ```
 
 `.gitignore` ganha entradas para `/e2e/.env.test`, `/e2e/test-results/` e
