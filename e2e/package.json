@@ -1,0 +1,18 @@
+{
+  "name": "e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Testes E2E do CryoFlix (Playwright) — fluxos de autenticação",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^24.10.1",
+    "@types/pg": "^8.11.6",
+    "dotenv": "^17.2.3",
+    "pg": "^8.23.0",
+    "typescript": "^5.9.3"
+  }
+}
