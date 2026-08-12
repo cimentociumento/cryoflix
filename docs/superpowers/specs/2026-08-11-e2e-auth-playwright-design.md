@@ -54,11 +54,12 @@ inconsistências de autorização listadas em `INVENTARIO.md` (ex:
   `/cryoflix_test`. Se apontar para `cryoflix` (dev) ou qualquer outra
   coisa, lança erro e aborta sem tocar em nada. Isso é o freio contra rodar
   os testes em cima de dado real.
-- `backend/.env.test` (novo, git-ignored) define:
-  - `DATABASE_URL=postgresql://cryoflix:cryoflix_dev@localhost:5432/cryoflix_test`
-  - `NODE_ENV=test`
-  - `PORT=4010` (isolada da porta de dev, 4000/3333 — nunca reaproveita um
-    backend de dev já rodando)
+- `e2e/.env.test` (novo, local — git-ignored; `e2e/.env.test.example` vai pro
+  git) define:
+  - `TEST_DATABASE_URL=postgresql://cryoflix:cryoflix_dev@localhost:5432/cryoflix_test`
+  - `BACKEND_TEST_PORT=4010` (isolada da porta de dev, 4000/3333 — nunca
+    reaproveita um backend de dev já rodando)
+  - `FRONTEND_TEST_PORT=5183`
 - Redis: reusa o Redis de dev (`localhost:6379`). Não precisa isolar — é só
   cache/rate-limit, degrada aberto por decisão já documentada no
   `CLAUDE.md`; os testes não dependem do estado dele.
@@ -68,7 +69,11 @@ inconsistências de autorização listadas em `INVENTARIO.md` (ex:
 `e2e/playwright.config.ts` sobe os dois processos automaticamente antes da
 suíte e derruba depois, sempre com `reuseExistingServer: false`:
 
-- **Backend**: `npm run dev` em `backend/`, env de `backend/.env.test`.
+- **Backend**: `npm run dev` em `backend/`, com `NODE_ENV`/`PORT`/`DATABASE_URL`
+  passados diretamente no `env` da entrada `webServer` do Playwright (lidos de
+  `e2e/.env.test`, não `backend/.env.test` — evita depender da precedência de
+  `dotenv.config()` dentro de `environment.ts`; o valor que o Playwright
+  injeta sempre vence).
 - **Frontend**: `npm run dev` em `frontend/`, porta isolada `5183`, com
   `VITE_API_PROXY_TARGET=http://localhost:4010`. Requer ajuste pequeno em
   `frontend/vite.config.ts`: o proxy de `/api` passa a ler
@@ -98,18 +103,33 @@ evita colisão entre testes paralelos sem precisar truncar entre cada um.
 e2e/
   package.json          # projeto próprio (Playwright + Prisma client), não é workspace
   playwright.config.ts
+  global-setup.ts
   scripts/setup-test-db.ts
   helpers/db.ts
+  helpers/testUser.ts
+  helpers/ui.ts
+  .env.test              # novo, local (git-ignored)
+  .env.test.example       # novo, commitado
   tests/
+    setup-test-db.spec.ts
+    db-helper.spec.ts
+    health.spec.ts
     auth-register-login.spec.ts
     auth-invalid-cases.spec.ts   # e-mail não verificado, senha errada
     auth-refresh.spec.ts         # API direta
     auth-logout.spec.ts
-backend/.env.test        # novo, local (git-ignored)
 ```
 
-`.gitignore` ganha uma entrada para `backend/.env.test` — hoje só `.env`
-puro é ignorado, `.env.test` passaria despercebido.
+`.gitignore` ganha entradas para `/e2e/.env.test`, `/e2e/test-results/` e
+`/e2e/playwright-report/` — hoje só `.env` puro é ignorado, `.env.test`
+passaria despercebido.
+
+**Correção de um bug de design encontrado durante o plano:** `AppLayout`
+também renderiza um botão "Entrar" no header (navega para `/account`)
+sempre que `!user` — o mesmo texto do toggle do `LoginForm`. Um seletor por
+texto simples (`getByRole('button', { name: 'Entrar' })`) bateria nos dois
+elementos ao mesmo tempo na home. Os helpers de UI escopam a busca dentro de
+`.login-form_toggle` para evitar essa ambiguidade.
 
 ## Erros e casos de borda
 
