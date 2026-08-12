@@ -64,5 +64,30 @@ describe('FFlix API', () => {
     const response = await request(app).get('/api/player/123/embed');
     expect(response.status).toBe(401);
   });
+
+  it('rejects a non-admin user creating content', async () => {
+    const email = `test+${Date.now()}@fflix.io`;
+    const password = 'Sup3rSecret!';
+
+    await request(app).post('/api/auth/register').send({ email, password, name: 'Tester' });
+
+    const registeredUser = await container.userRepository.findByEmail(email);
+    const verifyToken = registeredUser?.emailVerifyToken;
+    await request(app).get('/api/auth/verify-email').query({ token: verifyToken });
+
+    const loginResponse = await request(app).post('/api/auth/login').send({ email, password });
+    const accessToken = loginResponse.body.accessToken as string;
+
+    const createResponse = await request(app)
+      .post('/api/content')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        title: 'Filme de teste',
+        description: 'Descrição com mais de dez caracteres',
+        duration: 120,
+      });
+
+    expect(createResponse.status).toBe(403);
+  });
 });
 
