@@ -11,12 +11,28 @@ const getEnv = (key: string, fallback?: string): string => {
   return value;
 };
 
+const nodeEnv = getEnv('NODE_ENV', 'development');
+
+// JWT_SECRET/REFRESH_SECRET têm fallback só fora de produção (dev/test
+// rodam sem .env neste repo). Em produção, um segredo ausente derruba o
+// boot em vez de assinar tokens com uma string pública conhecida.
+const getSecret = (key: string, devFallback: string): string => {
+  const value = process.env[key];
+  if (value) {
+    return value;
+  }
+  if (nodeEnv === 'production') {
+    throw new Error(`Missing environment variable: ${key}`);
+  }
+  return devFallback;
+};
+
 export const env = {
-  nodeEnv: getEnv('NODE_ENV', 'development'),
+  nodeEnv,
   port: Number(getEnv('PORT', '4000')),
-  jwtSecret: getEnv('JWT_SECRET', 'super-secret-key'),
+  jwtSecret: getSecret('JWT_SECRET', 'super-secret-key'),
   jwtExpiresIn: getEnv('JWT_EXPIRES_IN', '15m') as StringValue,
-  refreshSecret: getEnv('REFRESH_SECRET', 'super-refresh-key'),
+  refreshSecret: getSecret('REFRESH_SECRET', 'super-refresh-key'),
   refreshExpiresIn: getEnv('REFRESH_EXPIRES_IN', '7d') as StringValue,
   cdnBaseUrl: getEnv('CDN_BASE_URL', 'https://cdn.cryoflix.local'),
   tmdb: {
