@@ -33,15 +33,26 @@ há gatilho de UI para isso hoje, confirmado em `INVENTARIO.md`):
 
 5. `POST /api/auth/refresh` rotaciona o refresh token corretamente.
 
+> **Adiado (não implementado nesta branch):** implementar o cenário 5 exigia
+> corrigir um bug real de geração de JWT no backend (tokens sem `jti`, logo
+> não únicos quando gerados no mesmo segundo), e a tentativa inicial também
+> incluiu duas mudanças de produção não solicitadas e arriscadas
+> (`create`→`upsert` no `PrismaRefreshTokenRepository`, mapeamento genérico
+> de erro JWT). Revertido por completo em `347a357` a pedido do usuário —
+> ver `docs/superpowers/plans/2026-08-11-e2e-auth-playwright-plan.md` (Task 9)
+> para o histórico. `e2e/tests/auth-refresh.spec.ts` não existe nesta branch.
+
 Fora de escopo desta fase: rotas `/api/admin/*`, `/api/content`, e as
 inconsistências de autorização listadas em `INVENTARIO.md` (ex:
 `/users/:id/history`). Ficam para uma fase futura.
 
 ## Banco de teste
 
-- Mesmo container Postgres do `docker-compose.yml` (`cryoflix-pg`), banco
-  **separado**: `cryoflix_test` — não o `cryoflix` de dev. Sem container
-  novo, sem porta nova.
+- Mesmo container Postgres do `docker-compose.yml` (serviço `postgres`,
+  container `cryoflix-postgres`), banco **separado**: `cryoflix_test` — não
+  o `cryoflix` de dev. Sem container novo. Host exposto em **5433** (não a
+  5432 padrão — nesta máquina de dev já existe um Postgres nativo ocupando
+  5432; `docker-compose.yml` foi ajustado para não colidir com ele).
 - `e2e/scripts/setup-test-db.ts`, executado no `globalSetup` do Playwright:
   1. Conecta como `cryoflix` no banco de manutenção `postgres` e roda
      `CREATE DATABASE cryoflix_test` se não existir (idempotente).
@@ -56,7 +67,7 @@ inconsistências de autorização listadas em `INVENTARIO.md` (ex:
   os testes em cima de dado real.
 - `e2e/.env.test` (novo, local — git-ignored; `e2e/.env.test.example` vai pro
   git) define:
-  - `TEST_DATABASE_URL=postgresql://cryoflix:cryoflix_dev@localhost:5432/cryoflix_test`
+  - `TEST_DATABASE_URL=postgresql://cryoflix:cryoflix123@localhost:5433/cryoflix_test`
   - `BACKEND_TEST_PORT=4010` (isolada da porta de dev, 4000/3333 — nunca
     reaproveita um backend de dev já rodando)
   - `FRONTEND_TEST_PORT=5183`
@@ -116,8 +127,8 @@ e2e/
     health.spec.ts
     auth-register-login.spec.ts
     auth-invalid-cases.spec.ts   # e-mail não verificado, senha errada
-    auth-refresh.spec.ts         # API direta
     auth-logout.spec.ts
+    # auth-refresh.spec.ts não existe — cenário 5 adiado, ver nota na Escopo
 ```
 
 `.gitignore` ganha entradas para `/e2e/.env.test`, `/e2e/test-results/` e
