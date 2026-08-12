@@ -24,9 +24,14 @@ que é o próprio objetivo desta fase, já aprovado.
 
 ## Global Constraints
 
-- O Postgres de `docker-compose.yml` (`cryoflix-pg`, usuário `cryoflix` /
-  senha `cryoflix_dev`, porta 5432) precisa estar rodando (`docker compose up -d`
-  na raiz) antes de qualquer tarefa que toque o banco de teste (Tasks 3+).
+- O Postgres de `docker-compose.yml` (serviço `postgres`, container
+  `cryoflix-postgres`, usuário `cryoflix` / senha `cryoflix123`, banco
+  `cryoflix`) precisa estar rodando (`docker compose up -d postgres` na raiz)
+  antes de qualquer tarefa que toque o banco de teste (Tasks 3+). O host
+  expõe a porta em **5433**, não 5432 — nesta máquina de dev já existe um
+  Postgres nativo (serviço Windows) ocupando 5432; `docker-compose.yml` foi
+  ajustado (`ports: ["5433:5432"]`) para não colidir com ele. Nunca assumir
+  a porta 5432 nos comandos abaixo.
 - Backend `node_modules` precisa já estar instalado (`cd backend && npm install`)
   — as tarefas abaixo não reinstalam dependências do backend/frontend, só as
   de `e2e/`.
@@ -101,7 +106,8 @@ que é o próprio objetivo desta fase, já aprovado.
 # Copie para e2e/.env.test — este arquivo (.example) vai pro git, o outro NÃO.
 # TEST_DATABASE_URL precisa terminar em /cryoflix_test — o setup do banco
 # de teste recusa rodar (de propósito) se apontar para qualquer outro banco.
-TEST_DATABASE_URL=postgresql://cryoflix:cryoflix_dev@localhost:5432/cryoflix_test
+# Porta 5433 (não 5432): ver Global Constraints no topo do plano.
+TEST_DATABASE_URL=postgresql://cryoflix:cryoflix123@localhost:5433/cryoflix_test
 BACKEND_TEST_PORT=4010
 FRONTEND_TEST_PORT=5183
 ```
@@ -256,12 +262,12 @@ test.describe('assertTestDatabaseUrl', () => {
 
   test('rejeita quando a URL aponta para o banco de dev', () => {
     expect(() =>
-      assertTestDatabaseUrl('postgresql://cryoflix:cryoflix_dev@localhost:5432/cryoflix'),
+      assertTestDatabaseUrl('postgresql://cryoflix:cryoflix123@localhost:5433/cryoflix'),
     ).toThrow('cryoflix_test');
   });
 
   test('aceita e devolve a URL quando aponta para cryoflix_test', () => {
-    const url = 'postgresql://cryoflix:cryoflix_dev@localhost:5432/cryoflix_test';
+    const url = 'postgresql://cryoflix:cryoflix123@localhost:5433/cryoflix_test';
     expect(assertTestDatabaseUrl(url)).toBe(url);
   });
 });
@@ -399,8 +405,9 @@ git commit -m "feat(e2e): add test database setup with dev-database guard"
 - Produces: `use.baseURL` = `http://localhost:${FRONTEND_TEST_PORT}` —
   usado por todos os specs de UI das Tasks 6-8 via `page.goto('/')`.
 
-**Pré-requisito:** `docker compose up -d` rodando na raiz do repo (Postgres
-precisa estar acessível em `localhost:5432`).
+**Pré-requisito:** `docker compose up -d postgres` rodando na raiz do repo
+(Postgres precisa estar acessível em `localhost:5433` — não 5432, ver Global
+Constraints).
 
 - [ ] **Step 1: Criar `e2e/playwright.config.ts`**
 
