@@ -9,8 +9,16 @@ export class PrismaRefreshTokenRepository implements IRefreshTokenRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(token: string, userId: string, expiresAt: Date, meta?: RefreshTokenMeta): Promise<void> {
-    await this.prisma.refreshToken.create({
-      data: {
+    await this.prisma.refreshToken.upsert({
+      where: { token },
+      update: {
+        userId,
+        expiresAt,
+        revokedAt: null,
+        userAgent: meta?.userAgent,
+        ipAddress: meta?.ipAddress,
+      },
+      create: {
         id: randomUUID(),
         token,
         userId,

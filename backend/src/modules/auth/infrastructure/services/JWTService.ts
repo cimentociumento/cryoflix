@@ -1,4 +1,5 @@
 import jwt, { JwtPayload, SignOptions } from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 import { env } from '../../../../config/environment';
 import { ITokenService, TokenPair } from '../../application/services/ITokenService';
 
@@ -7,9 +8,12 @@ export class JWTService implements ITokenService {
     const accessOptions: SignOptions = { expiresIn: env.jwtExpiresIn };
     const refreshOptions: SignOptions = { expiresIn: env.refreshExpiresIn };
 
-    const accessToken = jwt.sign(payload, env.jwtSecret as jwt.Secret, accessOptions);
+    const accessPayload = { ...payload, jti: randomUUID() };
+    const refreshPayload = { ...payload, jti: randomUUID() };
 
-    const refreshToken = jwt.sign(payload, env.refreshSecret as jwt.Secret, refreshOptions);
+    const accessToken = jwt.sign(accessPayload, env.jwtSecret as jwt.Secret, accessOptions);
+
+    const refreshToken = jwt.sign(refreshPayload, env.refreshSecret as jwt.Secret, refreshOptions);
 
     return { accessToken, refreshToken };
   }

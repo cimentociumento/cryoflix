@@ -61,6 +61,12 @@ export const createApp = () => {
       return;
     }
 
+    // Erros de JWT
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+      res.status(Http.UNAUTHORIZED).json({ message: 'Token inválido ou expirado' });
+      return;
+    }
+
     // Erros de domínio
     if (err instanceof ValidationError) {
       res.status(Http.BAD_REQUEST).json({ message: err.message });
