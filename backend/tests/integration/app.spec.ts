@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { createApp } from '../../src/app';
+import { container } from '../../src/shared/container';
 
 const app = createApp();
 
@@ -29,6 +30,15 @@ describe('FFlix API', () => {
         roles: ['viewer'],
       }),
     );
+
+    const registeredUser = await container.userRepository.findByEmail(email);
+    const verifyToken = registeredUser?.emailVerifyToken;
+    expect(verifyToken).toEqual(expect.any(String));
+
+    const verifyResponse = await request(app)
+      .get('/api/auth/verify-email')
+      .query({ token: verifyToken });
+    expect(verifyResponse.status).toBe(200);
 
     const loginResponse = await request(app).post('/api/auth/login').send({ email, password });
 
