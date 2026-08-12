@@ -147,5 +147,32 @@ describe('FFlix API', () => {
       .set('Authorization', `Bearer ${owner.accessToken}`);
     expect(ownerResponse.status).toBe(200);
   });
+
+  it('rejects unauthenticated upload callback and callback for another user job', async () => {
+    const owner = await registerVerifyLogin('uploadowner');
+    const intruder = await registerVerifyLogin('uploadintruder');
+
+    const signedUrlResponse = await request(app)
+      .post('/api/upload/signed-url')
+      .set('Authorization', `Bearer ${owner.accessToken}`)
+      .send({ fileName: 'filme.mp4', mimeType: 'video/mp4' });
+    expect(signedUrlResponse.status).toBe(201);
+    const jobId = signedUrlResponse.body.jobId as string;
+
+    const noAuthResponse = await request(app).post('/api/upload/callback').send({ jobId });
+    expect(noAuthResponse.status).toBe(401);
+
+    const wrongOwnerResponse = await request(app)
+      .post('/api/upload/callback')
+      .set('Authorization', `Bearer ${intruder.accessToken}`)
+      .send({ jobId });
+    expect(wrongOwnerResponse.status).toBe(403);
+
+    const ownerResponse = await request(app)
+      .post('/api/upload/callback')
+      .set('Authorization', `Bearer ${owner.accessToken}`)
+      .send({ jobId });
+    expect(ownerResponse.status).toBe(200);
+  });
 });
 
