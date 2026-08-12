@@ -59,5 +59,10 @@ describe('FFlix API', () => {
     expect(response.status).toBe(200);
     expect(Array.isArray(response.body)).toBe(true);
   });
+
+  it('rejects unauthenticated access to player embed', async () => {
+    const response = await request(app).get('/api/player/123/embed');
+    expect(response.status).toBe(401);
+  });
 });
 
