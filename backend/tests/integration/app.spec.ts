@@ -89,5 +89,31 @@ describe('FFlix API', () => {
 
     expect(createResponse.status).toBe(403);
   });
+
+  it('rejects requesting recommendations for another user id', async () => {
+    const registerAndLogin = async (label: string) => {
+      const email = `test+${label}+${Date.now()}@fflix.io`;
+      const password = 'Sup3rSecret!';
+      await request(app).post('/api/auth/register').send({ email, password, name: label });
+      const registeredUser = await container.userRepository.findByEmail(email);
+      await request(app)
+        .get('/api/auth/verify-email')
+        .query({ token: registeredUser?.emailVerifyToken });
+      const loginResponse = await request(app).post('/api/auth/login').send({ email, password });
+      return {
+        accessToken: loginResponse.body.accessToken as string,
+        userId: loginResponse.body.user.id as string,
+      };
+    };
+
+    const userA = await registerAndLogin('usera');
+    const userB = await registerAndLogin('userb');
+
+    const response = await request(app)
+      .get(`/api/recommendations/${userA.userId}`)
+      .set('Authorization', `Bearer ${userB.accessToken}`);
+
+    expect(response.status).toBe(403);
+  });
 });
 
