@@ -10,5 +10,9 @@ const controller = new StreamingController(streamingService);
 export const streamingRoutes = Router();
 
 streamingRoutes.get('/playback/:videoId', authMiddleware, safeHandler(controller.playback));
-streamingRoutes.post('/sessions/:sessionId/heartbeat', safeHandler(controller.heartbeat));
+streamingRoutes.post(
+  '/sessions/:sessionId/heartbeat',
+  authMiddleware,
+  safeHandler(controller.heartbeat),
+);
 

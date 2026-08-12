@@ -123,5 +123,29 @@ describe('FFlix API', () => {
 
     expect(response.status).toBe(403);
   });
+
+  it('rejects unauthenticated heartbeat and heartbeat for another user session', async () => {
+    const owner = await registerVerifyLogin('streamowner');
+    const intruder = await registerVerifyLogin('streamintruder');
+
+    const playbackResponse = await request(app)
+      .get('/api/streaming/playback/42')
+      .set('Authorization', `Bearer ${owner.accessToken}`);
+    expect(playbackResponse.status).toBe(200);
+    const sessionId = playbackResponse.body.id as string;
+
+    const noAuthResponse = await request(app).post(`/api/streaming/sessions/${sessionId}/heartbeat`);
+    expect(noAuthResponse.status).toBe(401);
+
+    const wrongOwnerResponse = await request(app)
+      .post(`/api/streaming/sessions/${sessionId}/heartbeat`)
+      .set('Authorization', `Bearer ${intruder.accessToken}`);
+    expect(wrongOwnerResponse.status).toBe(403);
+
+    const ownerResponse = await request(app)
+      .post(`/api/streaming/sessions/${sessionId}/heartbeat`)
+      .set('Authorization', `Bearer ${owner.accessToken}`);
+    expect(ownerResponse.status).toBe(200);
+  });
 });
 
