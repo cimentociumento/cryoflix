@@ -75,14 +75,16 @@ const ProfileSection = ({
 }) => {
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [bio, setBio] = useState(initialBio);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const { refreshProfile } = useAuth();
   const client = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: () => userService.updateProfile({ displayName, bio: bio || null }),
-    onSuccess: () => {
+    mutationFn: () => userService.updateProfile({ displayName: displayName.trim(), bio: bio || null }),
+    onSuccess: async (profile) => {
+      setDisplayName(profile.displayName ?? profile.name);
       client.invalidateQueries({ queryKey: ['profile'] });
-      void refreshProfile();
+      await refreshProfile();
     },
   });
 
@@ -91,22 +93,44 @@ const ProfileSection = ({
       className="preferences-form"
       onSubmit={(e) => {
         e.preventDefault();
+        if (mutation.isPending) return;
+        setValidationError(null);
+        mutation.reset();
+        if (!displayName.trim() || displayName.trim().length > 120) {
+          setValidationError('O nome de exibição deve ter entre 1 e 120 caracteres.');
+          return;
+        }
         mutation.mutate();
       }}
     >
       <h3>Perfil</h3>
       <label>
         Nome de exibição
-        <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+        <input
+          value={displayName}
+          onChange={(e) => {
+            setDisplayName(e.target.value);
+            setValidationError(null);
+            mutation.reset();
+          }}
+          required
+          maxLength={120}
+          disabled={mutation.isPending}
+        />
       </label>
       <label>
         Bio
-        <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} />
+        <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} maxLength={500} disabled={mutation.isPending} />
       </label>
       <Button type="submit" disabled={mutation.isPending}>
         {mutation.isPending ? 'Salvando...' : 'Salvar perfil'}
       </Button>
       {mutation.isSuccess ? <span className="status success">Perfil atualizado!</span> : null}
+      {validationError || mutation.isError ? (
+        <span className="status error" role="alert">
+          {validationError ?? (mutation.error instanceof Error ? mutation.error.message : 'Erro ao salvar o perfil. Tente novamente.')}
+        </span>
+      ) : null}
     </form>
   );
 };
@@ -179,9 +203,9 @@ const PreferencesForm = ({ initialPreferences }: { initialPreferences: Record<st
 
   const mutation = useMutation({
     mutationFn: () => userService.updatePreferences({ language, theme }),
-    onSuccess: () => {
+    onSuccess: async () => {
       client.invalidateQueries({ queryKey: ['profile'] });
-      refreshProfile();
+      await refreshProfile();
     },
   });
 

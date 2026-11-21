@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../../shared/components/Button/Button';
 import { useAuth } from '../../../../app/providers/AuthProvider';
@@ -13,6 +13,16 @@ export const LoginForm = () => {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const submitting = useRef(false);
+
+  const changeMode = (nextMode: 'login' | 'register') => {
+    if (submitting.current) return;
+    setMode(nextMode);
+    setStatus('idle');
+    setError(null);
+    setSuccessMessage(null);
+  };
 
   const validatePassword = (value: string) => {
     if (value.length < MIN_PASSWORD_LENGTH) {
@@ -29,10 +39,16 @@ export const LoginForm = () => {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    setStatus('loading');
+    if (submitting.current) return;
     setError(null);
+    setSuccessMessage(null);
 
     if (mode === 'register') {
+      if (name.trim().length < 2 || name.trim().length > 120) {
+        setStatus('error');
+        setError('O nome deve ter entre 2 e 120 caracteres.');
+        return;
+      }
       const passwordError = validatePassword(password);
       if (passwordError) {
         setStatus('error');
@@ -41,16 +57,23 @@ export const LoginForm = () => {
       }
     }
 
+    submitting.current = true;
+    setStatus('loading');
     try {
       if (mode === 'login') {
         await login({ email, password });
+        setSuccessMessage('Login realizado!');
       } else {
-        await register({ email, password, name });
+        await register({ email, password, name: name.trim() });
+        setSuccessMessage('Conta criada! Verifique seu e-mail para confirmar o cadastro antes de entrar.');
+        setPassword('');
       }
       setStatus('success');
     } catch (err) {
       setStatus('error');
       setError(err instanceof Error ? err.message : 'Falha ao autenticar');
+    } finally {
+      submitting.current = false;
     }
   };
 
@@ -60,14 +83,16 @@ export const LoginForm = () => {
         <button
           type="button"
           className={mode === 'login' ? 'active' : ''}
-          onClick={() => setMode('login')}
+          onClick={() => changeMode('login')}
+          disabled={status === 'loading'}
         >
           Entrar
         </button>
         <button
           type="button"
           className={mode === 'register' ? 'active' : ''}
-          onClick={() => setMode('register')}
+          onClick={() => changeMode('register')}
+          disabled={status === 'loading'}
         >
           Criar conta
         </button>
@@ -80,6 +105,9 @@ export const LoginForm = () => {
             value={name}
             onChange={(event) => setName(event.target.value)}
             required
+            minLength={2}
+            maxLength={120}
+            disabled={status === 'loading'}
             autoComplete="name"
           />
         </div>
@@ -94,6 +122,7 @@ export const LoginForm = () => {
           required
           autoComplete="email"
           inputMode="email"
+          disabled={status === 'loading'}
         />
       </div>
       <div className="field">
@@ -106,6 +135,7 @@ export const LoginForm = () => {
           required
           autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
           minLength={MIN_PASSWORD_LENGTH}
+          disabled={status === 'loading'}
         />
         {mode === 'register' ? (
           <small className="status">
@@ -121,8 +151,8 @@ export const LoginForm = () => {
       <Button type="submit" disabled={status === 'loading'}>
         {status === 'loading' ? 'Carregando...' : mode === 'login' ? 'Entrar' : 'Registrar'}
       </Button>
-      {status === 'success' ? <span className="status success">Tudo pronto!</span> : null}
-      {error ? <span className="status error">{error}</span> : null}
+      {status === 'success' ? <span className="status success" role="status">{successMessage}</span> : null}
+      {error ? <span className="status error" role="alert">{error}</span> : null}
     </form>
   );
 };

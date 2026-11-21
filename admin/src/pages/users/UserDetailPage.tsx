@@ -1,16 +1,43 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { isAxiosError } from 'axios';
 import { useUserDetail, useUserMutations } from '../../hooks/useUsers';
 import { useAuditLogs } from '../../hooks/useAuditLogs';
 import toast from 'react-hot-toast';
 
+const mutationErrorMessage = (error: unknown, fallback: string) =>
+  isAxiosError<{ message?: string }>(error) ? error.response?.data?.message ?? fallback : fallback;
+
 export const UserDetailPage = () => {
   const { id } = useParams<{ id: string }>();
-  const { data, isLoading } = useUserDetail(id);
+  const navigate = useNavigate();
+  const { data, isLoading, isError, error, refetch } = useUserDetail(id);
   const { patchRole, patchStatus, remove } = useUserMutations();
   const audit = useAuditLogs({ page: 1, limit: 20, userId: id });
+  const isMutating = patchRole.isPending || patchStatus.isPending || remove.isPending;
 
-  if (isLoading || !data) {
+  if (isLoading) {
     return <p className="text-neutral-400">Carregando…</p>;
+  }
+
+  if (isError || !data) {
+    const notFound = !id || (isAxiosError(error) && error.response?.status === 404);
+    return (
+      <div className="space-y-3">
+        <p role="alert" className="text-red-300">
+          {notFound ? 'Usuário não encontrado.' : 'Não foi possível carregar o usuário.'}
+        </p>
+        <div className="flex gap-3 text-sm">
+          <Link to="/users" className="text-[var(--color-cryo-accent)] hover:underline">
+            ← Voltar para usuários
+          </Link>
+          {!notFound ? (
+            <button type="button" className="underline" onClick={() => void refetch()}>
+              Tentar novamente
+            </button>
+          ) : null}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -30,36 +57,42 @@ export const UserDetailPage = () => {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            className="rounded border border-neutral-600 px-3 py-1 text-xs"
+            disabled={isMutating}
+            className="rounded border border-neutral-600 px-3 py-1 text-xs disabled:opacity-40"
             onClick={() =>
               void patchRole
                 .mutateAsync({ id: data.id, role: data.role === 'ADMIN' ? 'USER' : 'ADMIN' })
                 .then(() => toast.success('Role atualizado'))
-                .catch(() => toast.error('Falha'))
+                .catch((err: unknown) => toast.error(mutationErrorMessage(err, 'Falha ao alterar o papel.')))
             }
           >
             Alternar role
           </button>
           <button
             type="button"
-            className="rounded border border-orange-700 px-3 py-1 text-xs text-orange-200"
+            disabled={isMutating}
+            className="rounded border border-orange-700 px-3 py-1 text-xs text-orange-200 disabled:opacity-40"
             onClick={() =>
               void patchStatus
                 .mutateAsync({ id: data.id, status: 'SUSPENDED' })
                 .then(() => toast.success('Suspenso'))
-                .catch(() => toast.error('Falha'))
+                .catch((err: unknown) => toast.error(mutationErrorMessage(err, 'Falha ao suspender.')))
             }
           >
             Suspender
           </button>
           <button
             type="button"
-            className="rounded border border-red-800 px-3 py-1 text-xs text-red-300"
+            disabled={isMutating}
+            className="rounded border border-red-800 px-3 py-1 text-xs text-red-300 disabled:opacity-40"
             onClick={() =>
               void remove
                 .mutateAsync(data.id)
-                .then(() => toast.success('Removido'))
-                .catch(() => toast.error('Falha'))
+                .then(() => {
+                  toast.success('Removido');
+                  navigate('/users', { replace: true });
+                })
+                .catch((err: unknown) => toast.error(mutationErrorMessage(err, 'Falha ao excluir.')))
             }
           >
             Excluir

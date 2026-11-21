@@ -6,6 +6,7 @@ import {
   switchToLoginMode,
   submitLoginForm,
   expectFormError,
+  expectRegistrationSuccess,
 } from '../helpers/ui';
 
 test('login antes de verificar o e-mail mostra o erro correto', async ({ page }) => {
@@ -13,14 +14,9 @@ test('login antes de verificar o e-mail mostra o erro correto', async ({ page })
   await page.goto('/');
 
   await submitRegisterForm(page, user);
-  await expectFormError(page, 'Verifique seu e-mail antes de fazer login.');
+  await expectRegistrationSuccess(page);
 
-  // Tentativa explícita de login (caminho de código diferente do
-  // auto-login disparado pelo cadastro) — a conta continua não verificada.
-  // A mensagem de erro é idêntica à do auto-login, então esperar a resposta
-  // de rede do POST /api/auth/login (em vez de só o texto na tela) prova que
-  // essa segunda tentativa realmente disparou, e não é o erro anterior parado
-  // na tela.
+  // A conta existe, mas o login continua bloqueado até verificar o e-mail.
   await switchToLoginMode(page);
   const [loginResponse] = await Promise.all([
     page.waitForResponse(
@@ -40,9 +36,7 @@ test('login com senha errada em conta verificada mostra credenciais inválidas',
   await page.goto('/');
 
   await submitRegisterForm(page, user);
-  // Aguarda a tentativa de auto-login falhar para garantir que o token está
-  // disponível no banco antes de tentar obtê-lo.
-  await expectFormError(page, 'Verifique seu e-mail antes de fazer login.');
+  await expectRegistrationSuccess(page);
 
   const verifyToken = await getEmailVerifyToken(user.email);
   const verifyResponse = await request.get(

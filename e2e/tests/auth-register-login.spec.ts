@@ -5,7 +5,7 @@ import {
   submitRegisterForm,
   switchToLoginMode,
   submitLoginForm,
-  expectFormError,
+  expectRegistrationSuccess,
 } from '../helpers/ui';
 
 test('cadastro, verificação de e-mail e login mostram o usuário autenticado', async ({
@@ -16,10 +16,7 @@ test('cadastro, verificação de e-mail e login mostram o usuário autenticado',
   await page.goto('/');
 
   await submitRegisterForm(page, user);
-  // AuthProvider.register tenta logar automaticamente após o cadastro;
-  // a conta ainda não está verificada, então isso falha — comportamento
-  // real do app, não um efeito colateral do teste.
-  await expectFormError(page, 'Verifique seu e-mail antes de fazer login.');
+  await expectRegistrationSuccess(page);
 
   const verifyToken = await getEmailVerifyToken(user.email);
   const verifyResponse = await request.get(
@@ -41,7 +38,7 @@ test('sessão sobrevive a um reload sem token nenhum guardado no client', async 
   await page.goto('/');
 
   await submitRegisterForm(page, user);
-  await expectFormError(page, 'Verifique seu e-mail antes de fazer login.');
+  await expectRegistrationSuccess(page);
 
   const verifyToken = await getEmailVerifyToken(user.email);
   const verifyResponse = await request.get(

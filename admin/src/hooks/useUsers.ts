@@ -17,19 +17,31 @@ export const useUserDetail = (id: string | undefined) =>
 
 export const useUserMutations = () => {
   const qc = useQueryClient();
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['admin', 'users'] });
+  const invalidate = async (userId?: string) => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
+      qc.invalidateQueries({ queryKey: ['admin', 'audit'] }),
+      qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] }),
+      ...(userId
+        ? [qc.invalidateQueries({ queryKey: ['admin', 'user', userId], exact: true })]
+        : []),
+    ]);
+  };
 
   const patchRole = useMutation({
     mutationFn: ({ id, role }: { id: string; role: 'USER' | 'ADMIN' }) => adminApi.patchRole(id, role),
-    onSuccess: invalidate,
+    onSuccess: (_data, { id }) => invalidate(id),
   });
   const patchStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => adminApi.patchStatus(id, status),
-    onSuccess: invalidate,
+    onSuccess: (_data, { id }) => invalidate(id),
   });
   const remove = useMutation({
     mutationFn: (id: string) => adminApi.deleteUser(id),
-    onSuccess: invalidate,
+    onSuccess: async (_data, id) => {
+      await invalidate();
+      qc.removeQueries({ queryKey: ['admin', 'user', id], exact: true });
+    },
   });
 
   return { patchRole, patchStatus, remove };

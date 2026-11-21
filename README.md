@@ -107,6 +107,28 @@ O script verifica:
 
 **Nota:** Configure as chaves de API no arquivo `.env` antes de executar os testes. Veja `backend/CONFIGURATION.md` para instruções detalhadas.
 
+## Verificação das melhorias de cadastro, perfil, preferências e painel
+
+O backend tem testes HTTP com dados em memória, isolados do banco configurado no `.env`:
+
+```powershell
+cd backend
+npm test
+npm run build
+```
+
+Os testes de interface cobrem cadastro, validação de nomes, catálogo e atualização do painel com respostas controladas, sem acessar o PostgreSQL nem as APIs externas:
+
+```powershell
+cd e2e
+npm ci
+npx playwright install chromium
+npm run test:ui
+npm run typecheck
+```
+
+Para usar o Edge instalado no Windows, defina `$env:PLAYWRIGHT_CHANNEL='msedge'` antes de executar os testes. A suíte completa com API e persistência reais continua disponível com `npm run test:e2e`; configure `e2e/.env.test` conforme `e2e/.env.test.example`, usando exclusivamente o banco `cryoflix_test`. Essa suíte limpa os dados desse banco de teste. Os testes de perfil e preferências simulam apenas os metadados de filmes externos.
+
 ## Próximos Passos
 
 - Migrar persistência de progresso e histórico para PostgreSQL com Prisma/TypeORM.

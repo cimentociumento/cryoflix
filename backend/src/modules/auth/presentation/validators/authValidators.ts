@@ -11,7 +11,11 @@ const strongPassword = z
 export const registerSchema = z.object({
   email: z.string().email(),
   password: strongPassword,
-  name: z.string().min(2),
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Nome deve ter pelo menos 2 caracteres válidos')
+    .max(120, 'Nome deve ter no máximo 120 caracteres'),
 });
 
 export const loginSchema = z.object({

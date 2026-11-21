@@ -5,6 +5,7 @@
   "description": "Testes E2E do CryoFlix (Playwright) — fluxos de autenticação",
   "scripts": {
     "test:e2e": "playwright test",
+    "test:ui": "playwright test --config=playwright.ui.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

@@ -154,7 +154,7 @@ export class User extends Entity<UserProps> {
     return User.restore(
       {
         ...this.props,
-        preferences,
+        preferences: { ...this.props.preferences, ...preferences },
         updatedAt: new Date(),
       },
       this.id,

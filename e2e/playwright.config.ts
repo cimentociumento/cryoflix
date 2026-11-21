@@ -10,11 +10,13 @@ const testDatabaseUrl = process.env.TEST_DATABASE_URL ?? '';
 
 export default defineConfig({
   testDir: './tests',
+  testIgnore: '**/ui/**',
   globalSetup: require.resolve('./global-setup'),
   workers: 1,
   timeout: 30_000,
   use: {
     baseURL: `http://localhost:${frontendPort}`,
+    channel: process.env.PLAYWRIGHT_CHANNEL,
     trace: 'on-first-retry',
   },
   webServer: [
