@@ -1,41 +1,63 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
 import { authService } from '../../services/api/authService';
 import { Button } from '../../shared/components/Button/Button';
+import { Panel } from '../../shared/components/ui/Panel';
+import { Field, controlClassName } from '../../shared/components/ui/Field';
+import { Notice } from '../../shared/components/ui/Notice';
+import { PageHeader } from '../../shared/components/ui/PageHeader';
+import { TextLink } from '../../shared/components/ui/TextLink';
 
 export const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    await authService.forgotPassword(email);
-    setSent(true);
+    setError(null);
+    setSubmitting(true);
+    try {
+      await authService.forgotPassword(email);
+      setSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível enviar. Tente novamente.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="page-stack">
-      <h1>Esqueci minha senha</h1>
+    <div className="mx-auto flex w-full max-w-md flex-col gap-6">
+      <PageHeader
+        title="Esqueci minha senha"
+        description="Informe seu e-mail para receber o link de redefinição."
+      />
       {sent ? (
-        <p>Se o e-mail existir, enviaremos instruções em instantes.</p>
+        <Notice tone="success">Se o e-mail existir, enviaremos as instruções em instantes.</Notice>
       ) : (
-        <form className="login-form" onSubmit={onSubmit}>
-          <div className="field">
-            <label htmlFor="email">E-mail</label>
+        <Panel as="form" className="flex flex-col gap-4" onSubmit={onSubmit}>
+          <Field label="E-mail" htmlFor="email">
             <input
               id="email"
               type="email"
+              className={controlClassName}
               value={email}
               onChange={(ev) => setEmail(ev.target.value)}
               required
+              autoComplete="email"
+              inputMode="email"
             />
-          </div>
-          <Button type="submit">Enviar</Button>
-        </form>
+          </Field>
+          <Button type="submit" disabled={submitting} className="w-full">
+            {submitting ? 'Enviando...' : 'Enviar link'}
+          </Button>
+          {error ? <Notice tone="error">{error}</Notice> : null}
+        </Panel>
       )}
-      <p>
-        <Link to="/account">Voltar</Link>
-      </p>
+      <TextLink to="/account" className="self-start">
+        Voltar para o login
+      </TextLink>
     </div>
   );
 };

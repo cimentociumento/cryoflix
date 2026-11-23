@@ -9,6 +9,11 @@ import { metadataService } from '../../services/api/metadataService';
 import { Section } from '../../components/Section/Section';
 import { VideoCard } from '../../components/VideoCard/VideoCard';
 import { formatWatchTime } from '../../shared/utils/watchTime';
+import { Panel } from '../../shared/components/ui/Panel';
+import { Field, controlClassName } from '../../shared/components/ui/Field';
+import { Notice } from '../../shared/components/ui/Notice';
+import { PageHeader } from '../../shared/components/ui/PageHeader';
+import { PosterSkeleton } from '../../shared/components/ui/PosterSkeleton';
 
 const adminUrl = import.meta.env.VITE_ADMIN_URL as string | undefined;
 
@@ -25,44 +30,54 @@ export const AccountPage = () => {
 
   if (!user) {
     return (
-      <div className="page-stack">
-        <h1>Minha conta</h1>
-        <p>Faça login ou crie um perfil para sincronizar preferências.</p>
-        <LoginForm />
+      <div className="mx-auto flex w-full max-w-md flex-col gap-6">
+        <PageHeader
+          title="Minha conta"
+          description="Entre ou crie uma conta para salvar seu histórico e preferências."
+        />
+        <Panel>
+          <LoginForm />
+        </Panel>
       </div>
     );
   }
 
   return (
-    <div className="page-stack">
+    <div className="flex flex-col gap-10">
       {resetBanner ? (
-        <p className="status success" style={{ marginTop: 0 }}>
-          Senha alterada com sucesso. Faça login novamente se necessário.
-        </p>
+        <Notice tone="success">Senha alterada com sucesso. Faça login novamente se necessário.</Notice>
       ) : null}
-      <header className="account-header">
-        <div>
-          <h1>{user.name}</h1>
-          <p>{user.email}</p>
-        </div>
-        <span className="badge badge-stable">{user.roles.join(', ')}</span>
-      </header>
-
-      {isAdmin && adminUrl ? (
-        <p>
-          <a href={adminUrl} target="_blank" rel="noreferrer">
-            Painel Admin
-          </a>
-        </p>
-      ) : null}
-
-      <ProfileSection
-        initialDisplayName={user.displayName ?? user.name}
-        initialBio={user.bio ?? ''}
+      <PageHeader
+        title={user.name}
+        description={user.email}
+        aside={
+          <div className="flex items-center gap-3">
+            <span className="rounded-full border border-bone/15 px-3 py-1 text-xs uppercase tracking-[0.2em] text-smoke">
+              {user.roles.join(', ')}
+            </span>
+            {isAdmin && adminUrl ? (
+              <a
+                href={adminUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm font-medium text-bone underline decoration-bone/30 underline-offset-4 hover:decoration-marquee"
+              >
+                Painel admin
+              </a>
+            ) : null}
+          </div>
+        }
       />
 
       <AccountHistory userId={user.id} />
-      <PreferencesForm initialPreferences={user.preferences} />
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ProfileSection
+          initialDisplayName={user.displayName ?? user.name}
+          initialBio={user.bio ?? ''}
+        />
+        <PreferencesForm initialPreferences={user.preferences} />
+      </div>
     </div>
   );
 };
@@ -88,27 +103,41 @@ const ProfileSection = ({
   });
 
   return (
-    <form
-      className="preferences-form"
+    <Panel
+      as="form"
+      className="flex flex-col gap-4"
       onSubmit={(e) => {
         e.preventDefault();
         mutation.mutate();
       }}
     >
-      <h3>Perfil</h3>
-      <label>
-        Nome de exibição
-        <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
-      </label>
-      <label>
-        Bio
-        <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} />
-      </label>
-      <Button type="submit" disabled={mutation.isPending}>
+      <h2 className="font-display text-xl text-bone">Perfil</h2>
+      <Field label="Nome de exibição" htmlFor="profile-name">
+        <input
+          id="profile-name"
+          className={controlClassName}
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          required
+        />
+      </Field>
+      <Field label="Bio" htmlFor="profile-bio">
+        <textarea
+          id="profile-bio"
+          className={`${controlClassName} resize-y`}
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          rows={3}
+        />
+      </Field>
+      <Button type="submit" disabled={mutation.isPending} className="self-start">
         {mutation.isPending ? 'Salvando...' : 'Salvar perfil'}
       </Button>
-      {mutation.isSuccess ? <span className="status success">Perfil atualizado!</span> : null}
-    </form>
+      {mutation.isSuccess ? <Notice tone="success">Perfil atualizado.</Notice> : null}
+      {mutation.isError ? (
+        <Notice tone="error">Não foi possível salvar o perfil. Tente novamente.</Notice>
+      ) : null}
+    </Panel>
   );
 };
 
@@ -145,7 +174,7 @@ const AccountHistory = ({ userId }: { userId: string }) => {
     return (
       <Section title="Histórico" description="Pontos de reprodução e títulos concluídos.">
         {[...Array(4)].map((_, idx) => (
-          <div className="skeleton-card" key={idx} />
+          <PosterSkeleton key={idx} />
         ))}
       </Section>
     );
@@ -154,10 +183,17 @@ const AccountHistory = ({ userId }: { userId: string }) => {
   if (isError) {
     return (
       <Section title="Histórico" description="Pontos de reprodução e títulos concluídos.">
-        <div role="alert">
-          <p>Não foi possível carregar seu histórico.</p>
-          <Button variant="secondary" onClick={() => void refetch()}>Tentar carregar histórico novamente</Button>
-        </div>
+        <Notice
+          tone="error"
+          className="sm:!w-96"
+          action={
+            <Button variant="secondary" onClick={() => void refetch()}>
+              Tentar novamente
+            </Button>
+          }
+        >
+          Não foi possível carregar seu histórico.
+        </Notice>
       </Section>
     );
   }
@@ -165,11 +201,9 @@ const AccountHistory = ({ userId }: { userId: string }) => {
   if (!data?.history?.length) {
     return (
       <Section title="Histórico" description="Pontos de reprodução e títulos concluídos.">
-        <div className="auth-panel">
-          <p style={{ margin: 0, opacity: 0.8 }}>
-            Seu histórico ainda está vazio. Abra um filme e salve um ponto de reprodução ou marque o título como concluído.
-          </p>
-        </div>
+        <Notice className="sm:!w-96">
+          Nada por aqui ainda. Abra um filme no catálogo e ele aparece neste histórico.
+        </Notice>
       </Section>
     );
   }
@@ -177,10 +211,12 @@ const AccountHistory = ({ userId }: { userId: string }) => {
   return (
     <Section title="Histórico" description="Pontos de reprodução e títulos concluídos.">
       {movies.some((item) => !item.movie) ? (
-        <p role="status">Alguns dados dos filmes estão indisponíveis. Seus pontos de reprodução continuam salvos.</p>
+        <p role="status" className="text-sm text-smoke">
+          Alguns dados dos filmes estão indisponíveis. Seus pontos de reprodução continuam salvos.
+        </p>
       ) : null}
       {loadingMovies
-        ? [...Array(4)].map((_, idx) => <div className="skeleton-card" key={idx} />)
+        ? [...Array(4)].map((_, idx) => <PosterSkeleton key={idx} />)
         : movies.map(({ id, movie }) => {
             const entry = data.history.find((item) => item.videoId === String(id));
             const subtitle = entry && entry.progress >= 1
@@ -209,36 +245,43 @@ const PreferencesForm = ({ initialPreferences }: { initialPreferences: Record<st
   });
 
   return (
-    <form
-      className="preferences-form"
+    <Panel
+      as="form"
+      className="flex flex-col gap-4"
       onSubmit={(event) => {
         event.preventDefault();
         mutation.mutate();
       }}
     >
-      <h3>Preferências</h3>
-      <label>
-        Idioma
-        <select value={language} onChange={(event) => setLanguage(event.target.value)}>
+      <h2 className="font-display text-xl text-bone">Preferências</h2>
+      <Field label="Idioma" htmlFor="pref-language">
+        <select
+          id="pref-language"
+          className={controlClassName}
+          value={language}
+          onChange={(event) => setLanguage(event.target.value)}
+        >
           <option value="pt-BR">Português</option>
           <option value="en-US">Inglês</option>
         </select>
-      </label>
-      <label>
-        Tema
-        <select value={theme} onChange={(event) => setTheme(event.target.value)}>
+      </Field>
+      <Field label="Tema" htmlFor="pref-theme">
+        <select
+          id="pref-theme"
+          className={controlClassName}
+          value={theme}
+          onChange={(event) => setTheme(event.target.value)}
+        >
           <option value="dark">Escuro</option>
           <option value="light">Claro</option>
         </select>
-      </label>
-      <Button type="submit" disabled={mutation.isPending}>
+      </Field>
+      <Button type="submit" disabled={mutation.isPending} className="self-start">
         {mutation.isPending ? 'Salvando...' : 'Salvar preferências'}
       </Button>
-      {mutation.isSuccess ? <span className="status success">Preferências atualizadas!</span> : null}
-      {mutation.isError ? (
-        <span className="status error">Erro ao salvar, tente novamente.</span>
-      ) : null}
-    </form>
+      {mutation.isSuccess ? <Notice tone="success">Preferências atualizadas.</Notice> : null}
+      {mutation.isError ? <Notice tone="error">Não foi possível salvar. Tente novamente.</Notice> : null}
+    </Panel>
   );
 };
 

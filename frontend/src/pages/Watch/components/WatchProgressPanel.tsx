@@ -5,6 +5,9 @@ import { Button } from '../../../shared/components/Button/Button';
 import { tokenStore } from '../../../shared/api/tokenStore';
 import type { WatchProgress } from '../../../shared/types';
 import { formatWatchTime } from '../../../shared/utils/watchTime';
+import { Panel } from '../../../shared/components/ui/Panel';
+import { Notice } from '../../../shared/components/ui/Notice';
+import { controlClassName } from '../../../shared/components/ui/Field';
 
 type Position = { progress: number; timestamp: number };
 
@@ -125,24 +128,27 @@ export const WatchProgressPanel = ({
 
   const saved = progress.data;
   return (
-    <section className="auth-panel" aria-label="Progresso de reprodução" style={{ marginTop: '1rem' }}>
-      <h2>Continuar assistindo</h2>
-      {progress.isPending ? <p role="status">Carregando ponto salvo...</p> : null}
+    <Panel as="section" aria-label="Progresso de reprodução" className="flex flex-col gap-4">
+      <h2 className="font-display text-xl text-bone">Continuar assistindo</h2>
+      {progress.isPending ? <p role="status" className="text-sm text-smoke">Carregando ponto salvo...</p> : null}
       {progress.isError ? (
-        <div role="alert">
-          <p>Não foi possível recuperar seu ponto de reprodução.</p>
-          <Button variant="secondary" onClick={() => void progress.refetch()}>Tentar carregar progresso novamente</Button>
-        </div>
+        <Notice
+          tone="error"
+          action={<Button variant="secondary" onClick={() => void progress.refetch()}>Tentar carregar progresso novamente</Button>}
+        >
+          Não foi possível recuperar seu ponto de reprodução.
+        </Notice>
       ) : null}
       {saved ? (
-        <p role="status">
-          Último ponto salvo: <strong>{formatWatchTime(saved.timestamp ?? 0)}</strong>
+        <p role="status" className="text-sm text-smoke">
+          Último ponto salvo: <strong className="font-semibold text-bone">{formatWatchTime(saved.timestamp ?? 0)}</strong>
           {saved.progress >= 1 ? ' — concluído' : saved.progress > 0 ? ` — ${Math.round(saved.progress * 100)}%` : ''}
         </p>
       ) : null}
-      <label>
+      <label className="flex flex-col gap-1.5 text-xs font-medium tracking-wide text-smoke">
         Abrir vídeo do dispositivo
         <input
+          className={`${controlClassName} file:mr-3 file:rounded-full file:border-0 file:bg-bone/10 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-bone`}
           type="file"
           accept="video/*"
           disabled={!progress.isSuccess || saving}
@@ -159,7 +165,7 @@ export const WatchProgressPanel = ({
           }}
         />
       </label>
-      <p>O arquivo fica no seu dispositivo. O ponto é salvo automaticamente ao pausar, avançar ou a cada 10 segundos de reprodução. Ao voltar, selecione novamente o mesmo arquivo para continuar do ponto salvo.</p>
+      <p className="text-xs text-smoke">O arquivo fica no seu dispositivo. O ponto é salvo automaticamente ao pausar, avançar ou a cada 10 segundos de reprodução. Ao voltar, selecione novamente o mesmo arquivo para continuar do ponto salvo.</p>
       {source ? (
         <video
           ref={videoRef}
@@ -167,7 +173,7 @@ export const WatchProgressPanel = ({
           controls
           preload="metadata"
           aria-label="Player de vídeo local"
-          style={{ width: '100%', maxHeight: '60vh', background: '#000' }}
+          className="max-h-[60vh] w-full rounded-lg bg-ink"
           onLoadedMetadata={(event) => {
             const video = event.currentTarget;
             if (!Number.isFinite(video.duration) || video.duration <= 0) return;
@@ -209,11 +215,13 @@ export const WatchProgressPanel = ({
           setMediaError(null);
         }}>Fechar vídeo do dispositivo</Button>
       ) : null}
-      {mediaError ? <p role="alert">{mediaError}</p> : null}
-      <details style={{ marginTop: '1rem' }}>
-        <summary>Salvar um ponto de um player externo</summary>
-        <p>Os players externos não informam automaticamente a posição ao CryoFlix. Anote o tempo aqui e, ao voltar, use esse marcador para ajustar o player externo.</p>
-        <form onSubmit={(event) => {
+      {mediaError ? <Notice tone="error">{mediaError}</Notice> : null}
+      <details className="group rounded-lg border border-bone/10 px-4 py-3">
+        <summary className="cursor-pointer text-sm font-medium text-bone marker:text-smoke focus-visible:outline focus-visible:outline-2 focus-visible:outline-marquee">
+          Salvar um ponto de um player externo
+        </summary>
+        <p className="mt-2 text-xs text-smoke">Os players externos não informam automaticamente a posição ao CryoFlix. Anote o tempo aqui e, ao voltar, use esse marcador para ajustar o player externo.</p>
+        <form className="mt-3 flex flex-wrap items-end gap-3" onSubmit={(event) => {
           event.preventDefault();
           const minuteValue = Number(minutes);
           const secondValue = Number(seconds || '0');
@@ -228,10 +236,10 @@ export const WatchProgressPanel = ({
             if (mounted.current) setManualSaved(true);
           }).catch(() => undefined);
         }}>
-          <label>Minutos <input type="number" min="0" max="35791393" step="1" value={minutes} onChange={(event) => { setMinutes(event.target.value); setManualSaved(false); }} required disabled={!progress.isSuccess || saving || Boolean(source)} /></label>
-          <label>Segundos <input type="number" min="0" max="59" step="1" value={seconds} onChange={(event) => { setSeconds(event.target.value); setManualSaved(false); }} disabled={!progress.isSuccess || saving || Boolean(source)} /></label>
+          <label className="flex w-28 flex-col gap-1.5 text-xs font-medium text-smoke">Minutos <input className={controlClassName} type="number" min="0" max="35791393" step="1" value={minutes} onChange={(event) => { setMinutes(event.target.value); setManualSaved(false); }} required disabled={!progress.isSuccess || saving || Boolean(source)} /></label>
+          <label className="flex w-28 flex-col gap-1.5 text-xs font-medium text-smoke">Segundos <input className={controlClassName} type="number" min="0" max="59" step="1" value={seconds} onChange={(event) => { setSeconds(event.target.value); setManualSaved(false); }} disabled={!progress.isSuccess || saving || Boolean(source)} /></label>
           <Button type="submit" disabled={!progress.isSuccess || saving || Boolean(source)}>Salvar ponto do player externo</Button>
-          {manualSaved ? <p role="status">Ponto de reprodução salvo.</p> : null}
+          {manualSaved ? <p role="status" className="w-full text-sm text-gold">Ponto de reprodução salvo.</p> : null}
         </form>
       </details>
       <Button variant="secondary" disabled={!progress.isSuccess || saving} onClick={() => {
@@ -240,16 +248,18 @@ export const WatchProgressPanel = ({
         completedExplicitly.current = true;
         lastPosition.current = { timestamp, progress: 1 };
         void save({ timestamp, progress: 1 }, true).catch(() => undefined);
-      }}>Marcar como concluído</Button>
-      {saving ? <p role="status">Salvando ponto de reprodução...</p> : null}
+      }} className="self-start">Marcar como concluído</Button>
+      {saving ? <p role="status" className="text-sm text-smoke">Salvando ponto de reprodução...</p> : null}
       {saveError ? (
-        <div role="alert">
-          <p>{saveError}</p>
-          {lastPosition.current ? <Button variant="secondary" disabled={saving} onClick={() => {
+        <Notice
+          tone="error"
+          action={lastPosition.current ? <Button variant="secondary" disabled={saving} onClick={() => {
             if (lastPosition.current) void save(lastPosition.current, true).catch(() => undefined);
           }}>Tentar salvar novamente</Button> : null}
-        </div>
+        >
+          {saveError}
+        </Notice>
       ) : null}
-    </section>
+    </Panel>
   );
 };

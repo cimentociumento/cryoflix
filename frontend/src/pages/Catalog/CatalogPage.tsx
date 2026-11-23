@@ -6,6 +6,10 @@ import { useAuth } from '../../app/providers/AuthProvider';
 import { Section } from '../../components/Section/Section';
 import { userService } from '../../services/api/userService';
 import { Button } from '../../shared/components/Button/Button';
+import { Notice } from '../../shared/components/ui/Notice';
+import { PageHeader } from '../../shared/components/ui/PageHeader';
+import { PosterSkeleton } from '../../shared/components/ui/PosterSkeleton';
+import { controlClassName } from '../../shared/components/ui/Field';
 
 export const CatalogPage = () => {
   const [query, setQuery] = useState('');
@@ -66,24 +70,25 @@ export const CatalogPage = () => {
 
   return (
     <div className="flex flex-col gap-8">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl text-bone">Catálogo</h1>
-          <p className="text-sm text-smoke">Busca em tempo real no TMDb.</p>
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="catalog-search" className="text-xs text-smoke">
-            Buscar filmes
-          </label>
-          <input
-            id="catalog-search"
-            className="rounded-full border border-white/10 bg-velvet px-4 py-2 text-bone placeholder:text-smoke focus-visible:outline focus-visible:outline-2 focus-visible:outline-marquee"
-            placeholder="Ex: Inception, Matrix"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
-      </header>
+      <PageHeader
+        title="Catálogo"
+        description="Busca em tempo real no TMDb."
+        aside={
+          <div className="flex w-full flex-col gap-1.5 sm:w-80">
+            <label htmlFor="catalog-search" className="text-xs font-medium tracking-wide text-smoke">
+              Buscar filmes
+            </label>
+            <input
+              id="catalog-search"
+              type="search"
+              className={controlClassName}
+              placeholder="Buscar filmes (ex: Inception, Matrix)"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+        }
+      />
       {!query && user ? (
         <Section
           title="Recomendados para você"
@@ -94,34 +99,33 @@ export const CatalogPage = () => {
           }
         >
           {loadingRecommended ? (
-            [...Array(4)].map((_, index) => (
-              <div className="aspect-[2/3] animate-pulse rounded-lg bg-velvet" key={index} />
-            ))
+            [...Array(4)].map((_, index) => <PosterSkeleton key={index} />)
           ) : (
             <>
               {recommendedError ? (
-                <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border border-white/10 bg-velvet p-4">
-                  <p className="text-sm text-bone">
-                    Não foi possível carregar as recomendações. Tente novamente.
-                  </p>
-                  <Button
-                    variant="secondary"
-                    onClick={() => void refetchRecommended()}
-                    disabled={fetchingRecommended}
-                  >
-                    Tentar carregar recomendações novamente
-                  </Button>
-                </div>
+                <Notice
+                  tone="error"
+                  className="sm:!w-96"
+                  action={
+                    <Button
+                      variant="secondary"
+                      onClick={() => void refetchRecommended()}
+                      disabled={fetchingRecommended}
+                    >
+                      Tentar carregar recomendações novamente
+                    </Button>
+                  }
+                >
+                  Não foi possível carregar as recomendações.
+                </Notice>
               ) : null}
               {recommended.slice(0, 8).map((movie) => <VideoCard key={movie.id} video={movie} />)}
               {!recommended.length && !recommendedError ? (
-                <div className="rounded-xl border border-white/10 bg-velvet p-4">
-                  <p className="text-sm text-smoke">
-                    {lastWatchedMovieId
-                      ? 'Nenhuma recomendação disponível para este título.'
-                      : 'Ainda não há recomendações. Assista a um título e volte aqui.'}
-                  </p>
-                </div>
+                <Notice className="sm:!w-96">
+                  {lastWatchedMovieId
+                    ? 'Nenhuma recomendação disponível para este título.'
+                    : 'Ainda não há recomendações. Assista a um título e volte aqui.'}
+                </Notice>
               ) : null}
             </>
           )}
@@ -133,16 +137,18 @@ export const CatalogPage = () => {
         </p>
       ) : null}
       {isError ? (
-        <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border border-white/10 bg-velvet p-4">
-          <p className="text-sm text-bone">
-            {movies.length
-              ? 'Não foi possível atualizar o catálogo. Os últimos resultados continuam abaixo.'
-              : 'Não foi possível carregar o catálogo. Verifique a conexão e tente novamente.'}
-          </p>
-          <Button variant="secondary" onClick={() => void refetch()} disabled={isFetching}>
-            Tentar novamente
-          </Button>
-        </div>
+        <Notice
+          tone="error"
+          action={
+            <Button variant="secondary" onClick={() => void refetch()} disabled={isFetching}>
+              Tentar novamente
+            </Button>
+          }
+        >
+          {movies.length
+            ? 'Não foi possível atualizar o catálogo. Os últimos resultados continuam abaixo.'
+            : 'Não foi possível carregar o catálogo. Verifique a conexão e tente novamente.'}
+        </Notice>
       ) : null}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {visibleMovies.map((movie) => (
@@ -153,7 +159,7 @@ export const CatalogPage = () => {
                 variant="secondary"
                 onClick={() => hideMovieMutation.mutate(movie.id)}
                 disabled={hideMovieMutation.isPending}
-                style={{ width: '100%', marginTop: '0.4rem' }}
+                className="mt-2 w-full !px-3 !py-1.5 text-xs"
               >
                 Não tenho interesse
               </Button>
@@ -161,7 +167,7 @@ export const CatalogPage = () => {
           </div>
         ))}
         {isSuccess && !visibleMovies.length && !isFetching ? (
-          <p className="text-sm text-smoke">
+          <p className="col-span-full text-sm text-smoke">
             {movies.length
               ? 'Todos os filmes desta lista estão ocultos pelas suas preferências.'
               : query

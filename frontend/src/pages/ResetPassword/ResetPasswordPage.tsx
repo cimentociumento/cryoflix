@@ -1,7 +1,12 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '../../services/api/authService';
 import { Button } from '../../shared/components/Button/Button';
+import { Panel } from '../../shared/components/ui/Panel';
+import { Field, controlClassName } from '../../shared/components/ui/Field';
+import { Notice } from '../../shared/components/ui/Notice';
+import { PageHeader } from '../../shared/components/ui/PageHeader';
+import { TextLink } from '../../shared/components/ui/TextLink';
 
 export const ResetPasswordPage = () => {
   const [params] = useSearchParams();
@@ -9,6 +14,7 @@ export const ResetPasswordPage = () => {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
   const onSubmit = async (e: FormEvent) => {
@@ -18,55 +24,65 @@ export const ResetPasswordPage = () => {
       setError('As senhas não coincidem.');
       return;
     }
+    setSubmitting(true);
     try {
       await authService.resetPassword(token, password);
       navigate('/account', { state: { resetOk: true } });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao redefinir');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   if (!token) {
     return (
-      <div className="page-stack">
-        <p>Token ausente.</p>
-        <Link to="/account">Voltar</Link>
+      <div className="mx-auto flex w-full max-w-md flex-col gap-6">
+        <PageHeader title="Nova senha" />
+        <Notice tone="error">Link sem token. Peça um novo e-mail de redefinição.</Notice>
+        <TextLink to="/forgot-password" className="self-start">
+          Pedir novo link
+        </TextLink>
       </div>
     );
   }
 
   return (
-    <div className="page-stack">
-      <h1>Nova senha</h1>
-      <form className="login-form" onSubmit={onSubmit}>
-        <div className="field">
-          <label htmlFor="password">Nova senha</label>
+    <div className="mx-auto flex w-full max-w-md flex-col gap-6">
+      <PageHeader title="Nova senha" description="Escolha uma senha nova para a sua conta." />
+      <Panel as="form" className="flex flex-col gap-4" onSubmit={onSubmit}>
+        <Field label="Nova senha" htmlFor="password">
           <input
             id="password"
             type="password"
+            className={controlClassName}
             value={password}
             onChange={(ev) => setPassword(ev.target.value)}
             required
             minLength={8}
+            autoComplete="new-password"
           />
-        </div>
-        <div className="field">
-          <label htmlFor="confirm">Confirmar</label>
+        </Field>
+        <Field label="Confirmar senha" htmlFor="confirm">
           <input
             id="confirm"
             type="password"
+            className={controlClassName}
             value={confirm}
             onChange={(ev) => setConfirm(ev.target.value)}
             required
             minLength={8}
+            autoComplete="new-password"
           />
-        </div>
-        {error ? <span className="status error">{error}</span> : null}
-        <Button type="submit">Salvar</Button>
-      </form>
-      <p>
-        <Link to="/account">Cancelar</Link>
-      </p>
+        </Field>
+        <Button type="submit" disabled={submitting} className="w-full">
+          {submitting ? 'Salvando...' : 'Salvar nova senha'}
+        </Button>
+        {error ? <Notice tone="error">{error}</Notice> : null}
+      </Panel>
+      <TextLink to="/account" className="self-start">
+        Cancelar
+      </TextLink>
     </div>
   );
 };

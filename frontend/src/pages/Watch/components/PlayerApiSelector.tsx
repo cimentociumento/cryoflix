@@ -117,7 +117,7 @@ export const PlayerApiSelector = ({
             onClick={() => {
               onSelect('superembed', superEmbedUrl);
             }}
-            style={{ width: '100%', marginTop: '0.75rem' }}
+            className="mt-3 w-full"
           >
             ▶ Assistir no SuperEmbed
           </Button>
@@ -139,7 +139,7 @@ export const PlayerApiSelector = ({
               onClick={() => {
                 onSelect('superflix', superFlixUrl!);
               }}
-              style={{ width: '100%', marginTop: '0.75rem' }}
+              className="mt-3 w-full"
             >
               ▶ Assistir no SuperFlix
             </Button>
@@ -158,7 +158,7 @@ export const PlayerApiSelector = ({
             <Button
               variant="secondary"
               disabled
-              style={{ width: '100%', marginTop: '0.75rem' }}
+              className="mt-3 w-full"
             >
               ▶ Assistir no SuperFlix
             </Button>
@@ -180,7 +180,7 @@ export const PlayerApiSelector = ({
             onClick={() => {
               onSelect('letsembed', letsEmbedUrl);
             }}
-            style={{ width: '100%', marginTop: '0.75rem' }}
+            className="mt-3 w-full"
           >
             ▶ Assistir no LetsEmbed
           </Button>
@@ -207,7 +207,7 @@ export const PlayerApiSelector = ({
                   onClick={() => {
                     if (url) onSelect(provider.api, url);
                   }}
-                  style={{ width: '100%', marginTop: '0.75rem' }}
+                  className="mt-3 w-full"
                 >
                   ▶ Assistir no {provider.name}
                 </Button>
@@ -221,7 +221,7 @@ export const PlayerApiSelector = ({
       ) : null}
 
       <div className="mt-2">
-        <Button variant="secondary" onClick={onClose} style={{ width: '100%' }}>
+        <Button variant="secondary" onClick={onClose} className="w-full">
           Cancelar
         </Button>
       </div>

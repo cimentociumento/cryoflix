@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
 import { Button } from '../../../../shared/components/Button/Button';
 import { useAuth } from '../../../../app/providers/AuthProvider';
+import { Field, controlClassName } from '../../../../shared/components/ui/Field';
+import { Notice } from '../../../../shared/components/ui/Notice';
+import { TextLink } from '../../../../shared/components/ui/TextLink';
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -54,76 +56,82 @@ export const LoginForm = () => {
     }
   };
 
+  const tab = (value: 'login' | 'register', label: string) => (
+    <button
+      type="button"
+      aria-pressed={mode === value}
+      onClick={() => {
+        setMode(value);
+        setError(null);
+        setStatus('idle');
+      }}
+      className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-marquee ${
+        mode === value ? 'bg-bone/10 text-bone' : 'text-smoke hover:text-bone'
+      }`}
+    >
+      {label}
+    </button>
+  );
+
   return (
-    <form className="login-form" onSubmit={handleSubmit} autoComplete="on">
-      <div className="login-form_toggle">
-        <button
-          type="button"
-          className={mode === 'login' ? 'active' : ''}
-          onClick={() => setMode('login')}
-        >
-          Entrar
-        </button>
-        <button
-          type="button"
-          className={mode === 'register' ? 'active' : ''}
-          onClick={() => setMode('register')}
-        >
-          Criar conta
-        </button>
+    <form className="flex flex-col gap-4" onSubmit={handleSubmit} autoComplete="on">
+      <div className="flex gap-1 rounded-full border border-bone/10 bg-ink p-1">
+        {tab('login', 'Entrar')}
+        {tab('register', 'Criar conta')}
       </div>
       {mode === 'register' ? (
-        <div className="field">
-          <label htmlFor="name">Nome</label>
+        <Field label="Nome" htmlFor="name">
           <input
             id="name"
+            className={controlClassName}
             value={name}
             onChange={(event) => setName(event.target.value)}
             required
             autoComplete="name"
           />
-        </div>
+        </Field>
       ) : null}
-      <div className="field">
-        <label htmlFor="email">E-mail</label>
+      <Field label="E-mail" htmlFor="email">
         <input
           id="email"
           type="email"
+          className={controlClassName}
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           required
           autoComplete="email"
           inputMode="email"
         />
-      </div>
-      <div className="field">
-        <label htmlFor="password">Senha</label>
+      </Field>
+      <Field
+        label="Senha"
+        htmlFor="password"
+        hint={
+          mode === 'register'
+            ? 'Mínimo 8 caracteres, com maiúscula, minúscula, número e um de: !@#$%^&*'
+            : undefined
+        }
+      >
         <input
           id="password"
           type="password"
+          className={controlClassName}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           required
           autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
           minLength={MIN_PASSWORD_LENGTH}
         />
-        {mode === 'register' ? (
-          <small className="status">
-            Mínimo 8 caracteres, maiúscula, minúscula, número e um de: !@#$%^&*
-          </small>
-        ) : null}
-      </div>
+      </Field>
       {mode === 'login' ? (
-        <p className="field" style={{ marginTop: 0 }}>
-          <Link to="/forgot-password">Esqueci minha senha</Link>
-        </p>
+        <TextLink to="/forgot-password" className="self-start text-xs">
+          Esqueci minha senha
+        </TextLink>
       ) : null}
-      <Button type="submit" disabled={status === 'loading'}>
+      <Button type="submit" disabled={status === 'loading'} className="w-full">
         {status === 'loading' ? 'Carregando...' : mode === 'login' ? 'Entrar' : 'Registrar'}
       </Button>
-      {status === 'success' ? <span className="status success">Tudo pronto!</span> : null}
-      {error ? <span className="status error">{error}</span> : null}
+      {error ? <Notice tone="error">{error}</Notice> : null}
     </form>
   );
 };
-

@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Button } from '../shared/components/Button/Button';
 import { useAuth } from '../app/providers/AuthProvider';
 
@@ -13,15 +13,14 @@ export const AppLayout = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="flex min-h-screen flex-col gap-8">
+    <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-4 sm:px-6">
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 py-4">
-        <div
-          role="button"
-          onClick={() => navigate('/')}
-          className="cursor-pointer font-display text-xl font-semibold uppercase tracking-[0.08em] text-marquee"
+        <Link
+          to="/"
+          className="font-display text-xl font-semibold uppercase tracking-[0.08em] text-marquee focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-marquee"
         >
           CryoFlix
-        </div>
+        </Link>
         <nav className="flex flex-wrap gap-6">
           {navItems.map((item) => (
             <NavLink
@@ -53,7 +52,7 @@ export const AppLayout = () => {
           )}
         </div>
       </header>
-      <main className="flex-1">
+      <main className="flex-1 pb-12">
         <Outlet />
       </main>
       <footer className="border-t border-white/10 pb-4 pt-6 text-center text-xs text-smoke">

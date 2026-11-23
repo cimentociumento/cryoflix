@@ -11,10 +11,10 @@ import { ResetPasswordPage } from '../pages/ResetPassword/ResetPasswordPage';
 
 export const AppRoutes = () => (
   <Routes>
-    <Route path="/verify-email" element={<VerifyEmailPage />} />
-    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-    <Route path="/reset-password" element={<ResetPasswordPage />} />
     <Route element={<AppLayout />}>
+      <Route path="verify-email" element={<VerifyEmailPage />} />
+      <Route path="forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="reset-password" element={<ResetPasswordPage />} />
       <Route index element={<HomePage />} />
       <Route path="catalog" element={<CatalogPage />} />
       <Route path="watch/:videoId" element={<WatchPage />} />

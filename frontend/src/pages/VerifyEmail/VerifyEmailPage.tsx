@@ -1,10 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '../../services/api/authService';
 import { Button } from '../../shared/components/Button/Button';
+import { Notice } from '../../shared/components/ui/Notice';
+import { PageHeader } from '../../shared/components/ui/PageHeader';
+import { TextLink } from '../../shared/components/ui/TextLink';
 
 export const VerifyEmailPage = () => {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const token = params.get('token') ?? '';
 
   const { data, isLoading, isError } = useQuery({
@@ -15,31 +19,26 @@ export const VerifyEmailPage = () => {
     refetchOnWindowFocus: false,
   });
 
-  if (!token || isError) {
-    return (
-      <div className="page-stack">
-        <h1>Verificação de e-mail</h1>
-        <p>{!token ? 'Token ausente na URL.' : 'Link inválido ou expirado.'}</p>
-        <p>
-          <Link to="/account">Voltar para a conta</Link>
-        </p>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="page-stack">
-        <p>Verificando e-mail…</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="page-stack">
-      <h1>Verificação de e-mail</h1>
-      <p>{data?.message}</p>
-      <Button onClick={() => (window.location.href = '/account')}>Ir para login</Button>
+    <div className="mx-auto flex w-full max-w-md flex-col gap-6">
+      <PageHeader title="Verificação de e-mail" />
+      {!token || isError ? (
+        <>
+          <Notice tone="error">{!token ? 'Token ausente na URL.' : 'Link inválido ou expirado.'}</Notice>
+          <TextLink to="/account" className="self-start">
+            Voltar para a conta
+          </TextLink>
+        </>
+      ) : isLoading ? (
+        <Notice>Verificando e-mail…</Notice>
+      ) : (
+        <>
+          <Notice tone="success">{data?.message}</Notice>
+          <Button className="self-start" onClick={() => navigate('/account')}>
+            Ir para login
+          </Button>
+        </>
+      )}
     </div>
   );
 };

@@ -8,6 +8,8 @@ import { Modal } from '../../shared/components/Modal/Modal';
 import { PlayerApiSelector, type StreamingApi } from './components/PlayerApiSelector';
 import { WatchProgressPanel } from './components/WatchProgressPanel';
 import { HttpError } from '../../shared/api/httpClient';
+import { Panel } from '../../shared/components/ui/Panel';
+import { LoginForm } from '../../features/auth/components/LoginForm/LoginForm';
 import {
   metadataService,
   playerService,
@@ -122,15 +124,22 @@ export const WatchPage = () => {
 
   if (!user) {
     return (
-      <div className="flex flex-col gap-3">
-        <h2 className="font-display text-2xl text-bone">Faça login para assistir</h2>
-        <p className="text-smoke">Entre com sua conta para iniciar a sessão segura de streaming.</p>
+      <div className="mx-auto flex w-full max-w-md flex-col gap-6">
+        <div>
+          <h2 className="font-display text-3xl text-bone">Faça login para assistir</h2>
+          <p className="mt-1 text-sm text-smoke">
+            Entre para assistir {movie.title} e salvar onde você parou.
+          </p>
+        </div>
+        <Panel>
+          <LoginForm />
+        </Panel>
       </div>
     );
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       <section className="flex flex-col gap-8">
         {loadingEmbed ? (
           <p className="text-smoke">Preparando player seguro...</p>
@@ -163,15 +172,8 @@ export const WatchPage = () => {
                   Clique no botão abaixo para escolher uma API de streaming
                 </p>
               </div>
-              <Button
-                onClick={handleOpenPlayer}
-                style={{
-                  padding: '1rem 2.5rem',
-                  fontSize: '1.1rem',
-                  fontWeight: 600,
-                }}
-              >
-                ▶ Assistir Agora
+              <Button onClick={handleOpenPlayer} className="!px-10 !py-4 !text-base">
+                ▶ Assistir agora
               </Button>
               {embedSource.quality && (
                 <p className="mt-4 text-[0.85rem] opacity-60">
