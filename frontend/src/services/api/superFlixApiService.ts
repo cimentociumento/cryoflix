@@ -2,42 +2,49 @@ function isValidImdbId(id: string): boolean {
   return /^tt\d{7,8}$/.test(id);
 }
 
+/**
+ * Domínio da SuperFlix API. O serviço troca de domínio com frequência; os domínios
+ * "de entrada" (ex.: superflixapi.help) redirecionam para o atual. Pode ser
+ * sobrescrito por VITE_SUPERFLIX_BASE_URL sem novo código.
+ */
+const DEFAULT_BASE_URL = 'https://superflixapi.help';
+
+const getBaseUrl = (): string => {
+  const fromEnv = (import.meta.env.VITE_SUPERFLIX_BASE_URL as string | undefined)?.trim();
+  const candidate = fromEnv || DEFAULT_BASE_URL;
+  try {
+    const url = new URL(candidate);
+    return url.protocol === 'https:' ? url.origin : DEFAULT_BASE_URL;
+  } catch {
+    return DEFAULT_BASE_URL;
+  }
+};
+
+const normalizeImdbId = (imdbId: string): string | null => {
+  const normalized = imdbId.startsWith('tt') ? imdbId : `tt${imdbId}`;
+  return isValidImdbId(normalized) ? normalized : null;
+};
+
 class SuperFlixApiService {
   /**
-   * Gera URL do iframe oficial do SuperFlixHD (superflixhd.epizy.com)
-   * utilizando os parâmetros padronizados:
-   *  - type: "movies" | "tvshows"
-   *  - imdb: IMDb ID (com ou sem prefixo "tt")
-   *
-   * Exemplo final:
-   * https://superflixhd.epizy.com/embed-2/?type=movies&imdb=tt1386697
-   *
+   * URL do player de filme: https://<domínio>/filme/{imdbId}
    * Retorna null se o IMDb ID não bater com o formato esperado.
    */
-  getMoviePlayerUrl(
-    imdbId: string,
-  ): string | null {
-    const normalizedImdbId = imdbId.startsWith('tt') ? imdbId : `tt${imdbId}`;
-    if (!isValidImdbId(normalizedImdbId)) return null;
-    const params = new URLSearchParams({ type: 'movies', imdb: normalizedImdbId });
-    return `https://superflixhd.epizy.com/embed-2/?${params.toString()}`;
+  getMoviePlayerUrl(imdbId: string): string | null {
+    const id = normalizeImdbId(imdbId);
+    return id ? `${getBaseUrl()}/filme/${encodeURIComponent(id)}` : null;
   }
 
   /**
-   * Gera URL do iframe oficial do SuperFlixHD para séries
-   * utilizando os parâmetros padronizados:
-   *  - type: "tvshows"
-   *  - imdb: IMDb ID (com ou sem prefixo "tt")
-   *
-   * Retorna null se o IMDb ID não bater com o formato esperado.
+   * URL do player de série: https://<domínio>/serie/{imdbId}[/{temporada}/{episódio}]
+   * Sem temporada/episódio, o próprio player mostra a seleção.
    */
-  getSeriesPlayerUrl(
-    imdbId: string,
-  ): string | null {
-    const normalizedImdbId = imdbId.startsWith('tt') ? imdbId : `tt${imdbId}`;
-    if (!isValidImdbId(normalizedImdbId)) return null;
-    const params = new URLSearchParams({ type: 'tvshows', imdb: normalizedImdbId });
-    return `https://superflixhd.epizy.com/embed-2/?${params.toString()}`;
+  getSeriesPlayerUrl(imdbId: string, season?: number, episode?: number): string | null {
+    const id = normalizeImdbId(imdbId);
+    if (!id) return null;
+    const base = `${getBaseUrl()}/serie/${encodeURIComponent(id)}`;
+    const validPart = (n?: number) => Number.isInteger(n) && (n as number) > 0;
+    return validPart(season) && validPart(episode) ? `${base}/${season}/${episode}` : base;
   }
 }
 

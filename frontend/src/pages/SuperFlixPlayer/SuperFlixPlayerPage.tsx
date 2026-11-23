@@ -35,7 +35,12 @@ export const SuperFlixPlayerPage = () => {
         <button onClick={() => navigate(-1)} className={BACK_BUTTON_CLASS}>
           ← Voltar
         </button>
-        <h2 className="m-0 font-display text-lg text-bone">SuperFlix Player</h2>
+        <div className="min-w-0">
+          <h2 className="m-0 font-display text-lg text-bone">SuperFlix Player</h2>
+          <p className="m-0 text-xs text-smoke">
+            Se aparecer a validação do Cloudflare, confirme que é humano para liberar o player.
+          </p>
+        </div>
       </div>
       <div className="relative flex-1 overflow-hidden">
         <iframe
@@ -49,7 +54,10 @@ export const SuperFlixPlayerPage = () => {
           scrolling="no"
           frameBorder={0}
           referrerPolicy="no-referrer"
-          sandbox="allow-scripts allow-forms allow-presentation"
+          // allow-same-origin é necessário: a SuperFlix exige a verificação do Cloudflare
+          // (Turnstile), que não renderiza em origem opaca. O iframe é de outro domínio,
+          // então isso não dá a ele acesso ao CryoFlix. Pop-ups continuam bloqueados.
+          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
         />
       </div>
     </div>

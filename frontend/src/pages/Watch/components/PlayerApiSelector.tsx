@@ -4,7 +4,6 @@ import { superFlixApiService } from '../../../services/api/superFlixApiService';
 export type StreamingApi =
   | 'superembed'
   | 'superflix'
-  | 'letsembed'
   | 'embedwave'
   | 'pomfy'
   | '2embed'
@@ -41,17 +40,9 @@ const PROVIDERS: Provider[] = [
     name: 'SuperFlix',
     audio: 'dub',
     recommended: true,
-    description: 'Filmes, séries e animes dublados em português, abertos no player do CryoFlix.',
+    description: 'Filmes dublados em português, no player do CryoFlix. Pode pedir uma verificação do Cloudflare antes de tocar.',
     unavailableReason: 'Requer IMDb ID, indisponível para este filme.',
     buildUrl: ({ imdbId }) => (imdbId ? superFlixApiService.getMoviePlayerUrl(imdbId) : null),
-  },
-  {
-    api: 'letsembed',
-    name: 'LetsEmbed',
-    audio: 'dub',
-    description: 'Seleção de idioma com áudio em português e várias qualidades.',
-    buildUrl: ({ tmdbId }) =>
-      `https://letsembed.cc/embed/movie/?${new URLSearchParams({ id: String(tmdbId) })}`,
   },
   {
     api: 'pomfy',
