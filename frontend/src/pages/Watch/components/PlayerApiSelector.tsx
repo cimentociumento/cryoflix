@@ -11,53 +11,100 @@ export type StreamingApi =
   | 'vidspark'
   | 'superembed-stream';
 
-const isValidTmdbId = (id: number) => Number.isInteger(id) && id > 0;
-const isValidImdbId = (id: string | null | undefined): id is string =>
-  typeof id === 'string' && /^ttd{7,8}$/.test(id);
+type Audio = 'dub' | 'sub';
 
-type ExtraProvider = {
-  api: StreamingApi;
-  name: string;
-  description: string;
-  // Recebe IDs já validados; retorna null quando o filme não tem o ID exigido.
-  buildUrl: (ids: { tmdbId: number; imdbId: string | null }) => string | null;
+type ProviderIds = {
+  tmdbId: number;
+  imdbId: string | null;
+  superEmbedUrl: string;
 };
 
-// Provedores externos abertos em nova aba (noopener/noreferrer), como SuperEmbed e LetsEmbed.
-const EXTRA_PROVIDERS: ExtraProvider[] = [
+type Provider = {
+  api: StreamingApi;
+  name: string;
+  audio: Audio;
+  description: string;
+  recommended?: boolean;
+  /** Mensagem exibida quando buildUrl retorna null (ID exigido ausente). */
+  unavailableReason?: string;
+  buildUrl: (ids: ProviderIds) => string | null;
+};
+
+const isValidTmdbId = (id: number) => Number.isInteger(id) && id > 0;
+const isValidImdbId = (id: string | null | undefined): id is string =>
+  typeof id === 'string' && /^tt\d{7,8}$/.test(id);
+
+const PROVIDERS: Provider[] = [
+  // ---- Dublados ----
   {
-    api: 'embedwave',
-    name: 'EmbedWave',
-    description: 'Alternativa ao SuperEmbed/2Embed, sem anúncios injetados e com failover entre servidores. Usa TMDb ID.',
-    buildUrl: ({ tmdbId }) => `https://embedwave.cc/embed/movie/${encodeURIComponent(tmdbId)}`,
+    api: 'superflix',
+    name: 'SuperFlix',
+    audio: 'dub',
+    recommended: true,
+    description: 'Filmes, séries e animes dublados em português, abertos no player do CryoFlix.',
+    unavailableReason: 'Requer IMDb ID, indisponível para este filme.',
+    buildUrl: ({ imdbId }) => (imdbId ? superFlixApiService.getMoviePlayerUrl(imdbId) : null),
+  },
+  {
+    api: 'letsembed',
+    name: 'LetsEmbed',
+    audio: 'dub',
+    description: 'Seleção de idioma com áudio em português e várias qualidades.',
+    buildUrl: ({ tmdbId }) =>
+      `https://letsembed.cc/embed/movie/?${new URLSearchParams({ id: String(tmdbId) })}`,
   },
   {
     api: 'pomfy',
     name: 'Pomfy',
-    description: 'Endpoint que redireciona para o conteúdo encontrado na web. Funciona só com TMDb ID.',
+    audio: 'dub',
+    description: 'Redireciona para o conteúdo encontrado na web. Usa TMDb ID.',
     buildUrl: ({ tmdbId }) => `https://api.pomfy.stream/filme/${encodeURIComponent(tmdbId)}`,
+  },
+  // ---- Legendados ----
+  {
+    api: 'superembed',
+    name: 'SuperEmbed',
+    audio: 'sub',
+    recommended: true,
+    description: 'Várias qualidades, HLS rápido e legendas integradas.',
+    buildUrl: ({ superEmbedUrl }) => superEmbedUrl || null,
+  },
+  {
+    api: 'superembed-stream',
+    name: 'SuperEmbed (servidores extras)',
+    audio: 'sub',
+    description: 'Mais de 10 servidores alternativos.',
+    buildUrl: ({ tmdbId, imdbId }) =>
+      `https://superembed.stream/?${new URLSearchParams({ video_id: String(imdbId ?? tmdbId) })}`,
+  },
+  {
+    api: 'embedwave',
+    name: 'EmbedWave',
+    audio: 'sub',
+    description: 'Sem anúncios injetados e com troca automática de servidor.',
+    buildUrl: ({ tmdbId }) => `https://embedwave.cc/embed/movie/${encodeURIComponent(tmdbId)}`,
   },
   {
     api: '2embed',
     name: '2Embed',
-    description: 'Uma das APIs mais tradicionais. Aceita IMDb ou TMDb ID.',
+    audio: 'sub',
+    description: 'Um dos provedores mais tradicionais.',
     buildUrl: ({ tmdbId, imdbId }) =>
       `https://www.2embed.cc/embed/${encodeURIComponent(imdbId ?? tmdbId)}`,
   },
   {
     api: 'vidspark',
     name: 'VidSpark',
-    description: 'Embed direto aceitando IMDb ou TMDb ID.',
+    audio: 'sub',
+    description: 'Embed direto, aceita IMDb ou TMDb ID.',
     buildUrl: ({ tmdbId, imdbId }) =>
       `https://vidspark.to/movie/${encodeURIComponent(imdbId ?? tmdbId)}`,
   },
-  {
-    api: 'superembed-stream',
-    name: 'SuperEmbed (servidores extras)',
-    description: 'Mais de 10 servidores, aceitando IMDb ou TMDb ID.',
-    buildUrl: ({ tmdbId, imdbId }) =>
-      `https://superembed.stream/?${new URLSearchParams({ video_id: String(imdbId ?? tmdbId) })}`,
-  },
+];
+
+const GROUPS: { audio: Audio; title: string; description: string }[] = [
+  { audio: 'dub', title: 'Dublados', description: 'Áudio em português.' },
+  { audio: 'sub', title: 'Legendados', description: 'Áudio original com legendas.' },
 ];
 
 type PlayerApiSelectorProps = {
@@ -77,155 +124,78 @@ export const PlayerApiSelector = ({
   onSelect,
   onClose,
 }: PlayerApiSelectorProps) => {
-  const getSuperFlixUrl = (): string | null => {
-    if (!imdbId) return null;
-    return superFlixApiService.getMoviePlayerUrl(imdbId);
-  };
-
-  const getLetsEmbedUrl = (): string => {
-    // LetsEmbed usa TMDb ID e tem seleção de idioma para conteúdo dublado
-    return `https://letsembed.cc/embed/movie/?id=${movieId}`;
-  };
-
-  const superFlixUrl = getSuperFlixUrl();
-  const hasSuperFlix = Boolean(superFlixUrl);
-  const letsEmbedUrl = getLetsEmbedUrl();
   const normalizedImdbId = imdbId && !imdbId.startsWith('tt') ? `tt${imdbId}` : imdbId;
-  const safeIds = isValidTmdbId(movieId)
-    ? { tmdbId: movieId, imdbId: isValidImdbId(normalizedImdbId) ? normalizedImdbId : null }
+  const ids: ProviderIds | null = isValidTmdbId(movieId)
+    ? {
+        tmdbId: movieId,
+        imdbId: isValidImdbId(normalizedImdbId) ? normalizedImdbId : null,
+        superEmbedUrl,
+      }
     : null;
 
   return (
     <div className="flex flex-col gap-6">
       <p className="m-0 leading-relaxed text-smoke">
-        Escolha uma das APIs de streaming disponíveis para assistir{' '}
-        <strong className="font-semibold text-bone">{movieTitle}</strong>:
+        Escolha como assistir <strong className="font-semibold text-bone">{movieTitle}</strong>:
       </p>
 
-      <div className="flex flex-col gap-4">
-        <div className="rounded-xl border border-white/10 bg-white/5 p-5 transition-colors hover:bg-white/10">
-          <div className="mb-2 flex items-center justify-between">
-            <h3 className="m-0 text-lg font-semibold text-bone">SuperEmbed</h3>
-            <span className="rounded-full bg-marquee px-3 py-1 text-xs font-semibold uppercase tracking-wide text-bone">
-              Recomendado
-            </span>
-          </div>
-          <p className="m-0 text-sm leading-relaxed text-smoke">
-            Player VIP com múltiplas qualidades, HLS rápido e legendas integradas.
-          </p>
-          <Button
-            onClick={() => {
-              onSelect('superembed', superEmbedUrl);
-            }}
-            className="mt-3 w-full"
-          >
-            ▶ Assistir no SuperEmbed
-          </Button>
-        </div>
-
-        {hasSuperFlix ? (
-          <div className="rounded-xl border border-white/10 bg-white/5 p-5 transition-colors hover:bg-white/10">
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="m-0 text-lg font-semibold text-bone">SuperFlix API</h3>
-              <span className="rounded-full bg-marquee px-3 py-1 text-xs font-semibold uppercase tracking-wide text-bone">
-                Dublado
-              </span>
-            </div>
-            <p className="m-0 text-sm leading-relaxed text-smoke">
-              Catálogo completo de filmes, séries e animes dublados em português com alta qualidade. Suporta personalização do player.
-            </p>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                onSelect('superflix', superFlixUrl!);
-              }}
-              className="mt-3 w-full"
+      {GROUPS.map((group) => (
+        <section key={group.audio} aria-labelledby={`providers-${group.audio}`} className="flex flex-col gap-2">
+          <header className="flex items-baseline justify-between gap-3">
+            <h3
+              id={`providers-${group.audio}`}
+              className="m-0 text-xs font-semibold uppercase tracking-[0.25em] text-bone"
             >
-              ▶ Assistir no SuperFlix
-            </Button>
-          </div>
-        ) : (
-          <div className="rounded-xl border border-white/10 bg-white/5 p-5 transition-colors hover:bg-white/10">
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="m-0 text-lg font-semibold text-bone">SuperFlix API</h3>
-              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-smoke">
-                Indisponível
-              </span>
-            </div>
-            <p className="m-0 text-sm leading-relaxed text-smoke">
-              Requer IMDb ID para acessar. Este filme não possui identificador IMDb disponível.
-            </p>
-            <Button
-              variant="secondary"
-              disabled
-              className="mt-3 w-full"
-            >
-              ▶ Assistir no SuperFlix
-            </Button>
-          </div>
-        )}
-
-        <div className="rounded-xl border border-white/10 bg-white/5 p-5 transition-colors hover:bg-white/10">
-          <div className="mb-2 flex items-center justify-between">
-            <h3 className="m-0 text-lg font-semibold text-bone">LetsEmbed</h3>
-            <span className="rounded-full bg-marquee px-3 py-1 text-xs font-semibold uppercase tracking-wide text-bone">
-              Dublado
-            </span>
-          </div>
-          <p className="m-0 text-sm leading-relaxed text-smoke">
-            Player com seleção de idioma para conteúdo dublado em português. Suporta múltiplas qualidades.
-          </p>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              onSelect('letsembed', letsEmbedUrl);
-            }}
-            className="mt-3 w-full"
-          >
-            ▶ Assistir no LetsEmbed
-          </Button>
-        </div>
-      </div>
-
-      {safeIds ? (
-        <div className="flex flex-col gap-4">
-          <h3 className="m-0 text-xs font-semibold uppercase tracking-[0.25em] text-smoke">
-            Mais provedores
-          </h3>
-          {EXTRA_PROVIDERS.map((provider) => {
-            const url = provider.buildUrl(safeIds);
-            return (
-              <div
-                key={provider.api}
-                className="rounded-xl border border-white/10 bg-white/5 p-5 transition-colors hover:bg-white/10"
-              >
-                <h3 className="m-0 mb-2 text-lg font-semibold text-bone">{provider.name}</h3>
-                <p className="m-0 text-sm leading-relaxed text-smoke">{provider.description}</p>
-                <Button
-                  variant="secondary"
-                  disabled={!url}
-                  onClick={() => {
-                    if (url) onSelect(provider.api, url);
-                  }}
-                  className="mt-3 w-full"
+              {group.title}
+            </h3>
+            <span className="text-xs text-smoke">{group.description}</span>
+          </header>
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            {PROVIDERS.filter((provider) => provider.audio === group.audio).map((provider) => {
+              const url = ids ? provider.buildUrl(ids) : null;
+              return (
+                <li
+                  key={provider.api}
+                  className="flex flex-col gap-3 rounded-lg border border-bone/10 bg-ink/40 p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  ▶ Assistir no {provider.name}
-                </Button>
-              </div>
-            );
-          })}
-          <p className="m-0 text-xs text-smoke/70">
-            Provedores externos e instáveis: abrem em nova aba e podem exibir anúncios.
-          </p>
-        </div>
-      ) : null}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-bone">{provider.name}</span>
+                      {provider.recommended ? (
+                        <span className="rounded-full border border-gold/40 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-gold">
+                          Recomendado
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="m-0 mt-0.5 text-sm text-smoke">
+                      {url ? provider.description : (provider.unavailableReason ?? 'Indisponível para este filme.')}
+                    </p>
+                  </div>
+                  <Button
+                    variant={provider.recommended ? 'primary' : 'secondary'}
+                    disabled={!url}
+                    aria-label={`Assistir no ${provider.name}`}
+                    onClick={() => {
+                      if (url) onSelect(provider.api, url);
+                    }}
+                    className="shrink-0 sm:w-32"
+                  >
+                    ▶ Assistir
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
 
-      <div className="mt-2">
-        <Button variant="secondary" onClick={onClose} className="w-full">
-          Cancelar
-        </Button>
-      </div>
+      <p className="m-0 text-xs text-smoke/70">
+        Provedores externos e instáveis: com exceção do SuperFlix, abrem em nova aba e podem exibir anúncios.
+      </p>
+
+      <Button variant="ghost" onClick={onClose} className="w-full">
+        Cancelar
+      </Button>
     </div>
   );
 };
-
