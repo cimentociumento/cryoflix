@@ -10,9 +10,9 @@ NODE_ENV=development
 PORT=4000
 
 # JWT
-JWT_SECRET=super-secret-key-change-in-production
+JWT_SECRET=
 JWT_EXPIRES_IN=15m
-REFRESH_SECRET=super-refresh-key-change-in-production
+REFRESH_SECRET=
 REFRESH_EXPIRES_IN=7d
 
 # CDN
@@ -20,7 +20,7 @@ CDN_BASE_URL=https://cdn.cryoflix.local
 
 # TMDb API
 # Obtenha sua chave em: https://www.themoviedb.org/settings/api
-TMDB_API_KEY=your_tmdb_api_key_here
+TMDB_API_KEY=
 TMDB_BASE_URL=https://api.themoviedb.org/3
 
 # SuperEmbed
@@ -28,7 +28,7 @@ SUPEREMBED_BASE_URL=https://multiembed.mov
 
 # OpenSubtitles API
 # Obtenha sua chave em: https://www.opensubtitles.com/en/consumers
-OPENSUBTITLES_API_KEY=your_opensubtitles_api_key_here
+OPENSUBTITLES_API_KEY=
 OPENSUBTITLES_USERNAME=cryoflix-demo
 OPENSUBTITLES_USER_AGENT=CryoFlix/1.0
 
@@ -38,6 +38,12 @@ REDIS_PORT=6379
 REDIS_PASSWORD=
 REDIS_ENABLED=false
 ```
+
+Preencha `JWT_SECRET` e `REFRESH_SECRET` com valores aleatórios diferentes, gerados por `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Produção exige ao menos 32 caracteres por segredo e `DATABASE_URL` configurada. Em desenvolvimento sem essas chaves, o processo gera chaves efêmeras, que invalidam sessões ao reiniciar.
+
+Para persistir histórico e progresso, configure `DATABASE_URL` com sua conexão PostgreSQL. O seed do administrador exige `ADMIN_EMAIL` e `ADMIN_PASSWORD`, com ao menos 12 caracteres, maiúscula, minúscula, número e símbolo. O seed não cria contas de demonstração com senha pública.
+
+No Docker Compose, copie `env.example` da raiz para `.env` e preencha `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `JWT_SECRET` e `REFRESH_SECRET` com valores próprios. O Compose recusa iniciar quando algum deles está vazio. Redis e seu healthcheck usam a senha configurada.
 
 ## Como Obter as Chaves de API
 

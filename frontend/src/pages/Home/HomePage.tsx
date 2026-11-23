@@ -11,9 +11,17 @@ import { LoginForm } from '../../features/auth/components/LoginForm/LoginForm';
 export const HomePage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: trending = [], isLoading: loadingTrending } = useQuery({
+  const {
+    data: trending = [],
+    isLoading: loadingTrending,
+    isFetching: fetchingTrending,
+    isError: trendingError,
+    isSuccess: trendingSuccess,
+    refetch: refetchTrending,
+  } = useQuery({
     queryKey: ['movies', 'trending'],
     queryFn: () => metadataService.getTrending(),
+    retry: false,
   });
 
   const featured = trending[0];
@@ -33,17 +41,35 @@ export const HomePage = () => {
       <div className="home-grid">
         <div>
           <Section title="Em Alta" description="Filmes populares do TMDb.">
+            {trendingError ? (
+              <div className="auth-panel" role="alert">
+                <p>
+                  Não foi possível carregar os filmes em alta. Tente novamente em instantes.
+                  {trending.length ? ' Os últimos resultados continuam disponíveis.' : ''}
+                </p>
+                <Button
+                  variant="secondary"
+                  disabled={fetchingTrending}
+                  onClick={() => void refetchTrending()}
+                >
+                  Tentar novamente
+                </Button>
+              </div>
+            ) : null}
             {loadingTrending
               ? [...Array(4)].map((_, index) => (
                   <div className="skeleton-card" key={index} />
                 ))
               : trending.map((movie) => <VideoCard key={movie.id} video={movie} />)}
+            {trendingSuccess && !trending.length && !fetchingTrending ? (
+              <p>Nenhum filme disponível no momento.</p>
+            ) : null}
           </Section>
         </div>
         {!user ? (
           <aside className="auth-panel">
             <h3>Entrar ou criar conta</h3>
-            <p>Use o e-mail demo ou cadastre um novo streaming user.</p>
+            <p>Entre com sua conta ou crie um cadastro.</p>
             <LoginForm />
           </aside>
         ) : (

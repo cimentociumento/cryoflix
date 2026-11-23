@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-cryoflix}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cryoflix123}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}
       POSTGRES_DB: ${POSTGRES_DB:-cryoflix}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -30,14 +30,19 @@ services:
     image: redis:7-alpine
     container_name: cryoflix-redis
     restart: unless-stopped
-    command: redis-server /usr/local/etc/redis/redis.conf --protected-mode no
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Defina REDIS_PASSWORD no arquivo .env}
+    command:
+      - /bin/sh
+      - -c
+      - exec redis-server /usr/local/etc/redis/redis.conf --requirepass "$$REDIS_PASSWORD"
     volumes:
       - redis_data:/data
       - ./infrastructure/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
     networks:
       - cryoflix-net
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -59,16 +64,16 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-cryoflix}:${POSTGRES_PASSWORD:-cryoflix123}@postgres:5432/${POSTGRES_DB:-cryoflix}?schema=public
-      JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret-min-32-chars-in-production}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cryoflix}:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}@postgres:5432/${POSTGRES_DB:-cryoflix}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET no arquivo .env}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
-      REFRESH_SECRET: ${REFRESH_SECRET:-change-this-refresh-secret-min-32-chars}
+      REFRESH_SECRET: ${REFRESH_SECRET:?Defina REFRESH_SECRET no arquivo .env}
       REFRESH_EXPIRES_IN: ${REFRESH_EXPIRES_IN:-7d}
       TMDB_API_KEY: ${TMDB_API_KEY:-}
       REDIS_ENABLED: "true"
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Defina REDIS_PASSWORD no arquivo .env}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
@@ -77,8 +82,8 @@ services:
       ADMIN_URL: ${ADMIN_URL:-http://localhost:3001}
       API_URL: ${API_URL:-http://backend:4000}
       OPENSUBTITLES_API_KEY: ${OPENSUBTITLES_API_KEY:-}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@cryoflix.io}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@CryoFlix2024!}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     ports:
       - "4000:4000"
     networks:

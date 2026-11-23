@@ -8,6 +8,7 @@ import { Button } from '../../shared/components/Button/Button';
 import { metadataService } from '../../services/api/metadataService';
 import { Section } from '../../components/Section/Section';
 import { VideoCard } from '../../components/VideoCard/VideoCard';
+import { formatWatchTime } from '../../shared/utils/watchTime';
 
 const adminUrl = import.meta.env.VITE_ADMIN_URL as string | undefined;
 
@@ -75,16 +76,14 @@ const ProfileSection = ({
 }) => {
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [bio, setBio] = useState(initialBio);
-  const [validationError, setValidationError] = useState<string | null>(null);
   const { refreshProfile } = useAuth();
   const client = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: () => userService.updateProfile({ displayName: displayName.trim(), bio: bio || null }),
-    onSuccess: async (profile) => {
-      setDisplayName(profile.displayName ?? profile.name);
+    mutationFn: () => userService.updateProfile({ displayName, bio: bio || null }),
+    onSuccess: () => {
       client.invalidateQueries({ queryKey: ['profile'] });
-      await refreshProfile();
+      void refreshProfile();
     },
   });
 
@@ -93,53 +92,32 @@ const ProfileSection = ({
       className="preferences-form"
       onSubmit={(e) => {
         e.preventDefault();
-        if (mutation.isPending) return;
-        setValidationError(null);
-        mutation.reset();
-        if (!displayName.trim() || displayName.trim().length > 120) {
-          setValidationError('O nome de exibição deve ter entre 1 e 120 caracteres.');
-          return;
-        }
         mutation.mutate();
       }}
     >
       <h3>Perfil</h3>
       <label>
         Nome de exibição
-        <input
-          value={displayName}
-          onChange={(e) => {
-            setDisplayName(e.target.value);
-            setValidationError(null);
-            mutation.reset();
-          }}
-          required
-          maxLength={120}
-          disabled={mutation.isPending}
-        />
+        <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
       </label>
       <label>
         Bio
-        <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} maxLength={500} disabled={mutation.isPending} />
+        <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} />
       </label>
       <Button type="submit" disabled={mutation.isPending}>
         {mutation.isPending ? 'Salvando...' : 'Salvar perfil'}
       </Button>
       {mutation.isSuccess ? <span className="status success">Perfil atualizado!</span> : null}
-      {validationError || mutation.isError ? (
-        <span className="status error" role="alert">
-          {validationError ?? (mutation.error instanceof Error ? mutation.error.message : 'Erro ao salvar o perfil. Tente novamente.')}
-        </span>
-      ) : null}
     </form>
   );
 };
 
 const AccountHistory = ({ userId }: { userId: string }) => {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['account-history', userId],
     queryFn: () => userService.getHistory(userId),
     staleTime: 30_000,
+    retry: false,
   });
 
   const historyIds = useMemo(() => {
@@ -154,15 +132,18 @@ const AccountHistory = ({ userId }: { userId: string }) => {
     queryKey: ['account-history-movies', userId, historyIds.join(',')],
     enabled: Boolean(historyIds.length),
     queryFn: async () => {
-      const results = await Promise.all(historyIds.map((id) => metadataService.getMovie(id)));
-      return results;
+      const results = await Promise.allSettled(historyIds.map((id) => metadataService.getMovie(id)));
+      return results.map((result, index) => ({
+        id: historyIds[index],
+        movie: result.status === 'fulfilled' ? result.value : null,
+      }));
     },
     staleTime: 60_000,
   });
 
   if (isLoading) {
     return (
-      <Section title="Histórico" description="Títulos marcados como concluídos.">
+      <Section title="Histórico" description="Pontos de reprodução e títulos concluídos.">
         {[...Array(4)].map((_, idx) => (
           <div className="skeleton-card" key={idx} />
         ))}
@@ -170,14 +151,23 @@ const AccountHistory = ({ userId }: { userId: string }) => {
     );
   }
 
+  if (isError) {
+    return (
+      <Section title="Histórico" description="Pontos de reprodução e títulos concluídos.">
+        <div role="alert">
+          <p>Não foi possível carregar seu histórico.</p>
+          <Button variant="secondary" onClick={() => void refetch()}>Tentar carregar histórico novamente</Button>
+        </div>
+      </Section>
+    );
+  }
+
   if (!data?.history?.length) {
     return (
-      <Section title="Histórico" description="Títulos marcados como concluídos.">
+      <Section title="Histórico" description="Pontos de reprodução e títulos concluídos.">
         <div className="auth-panel">
           <p style={{ margin: 0, opacity: 0.8 }}>
-            Seu histórico ainda está vazio. Para adicionar um título, abra um filme e clique em
-            {' '}
-            <strong>Marcar como concluído</strong>.
+            Seu histórico ainda está vazio. Abra um filme e salve um ponto de reprodução ou marque o título como concluído.
           </p>
         </div>
       </Section>
@@ -185,12 +175,21 @@ const AccountHistory = ({ userId }: { userId: string }) => {
   }
 
   return (
-    <Section title="Histórico" description="Títulos marcados como concluídos.">
+    <Section title="Histórico" description="Pontos de reprodução e títulos concluídos.">
+      {movies.some((item) => !item.movie) ? (
+        <p role="status">Alguns dados dos filmes estão indisponíveis. Seus pontos de reprodução continuam salvos.</p>
+      ) : null}
       {loadingMovies
         ? [...Array(4)].map((_, idx) => <div className="skeleton-card" key={idx} />)
-        : movies.map((movie) => (
-            <VideoCard key={movie.id} video={movie} subtitle="Concluído" />
-          ))}
+        : movies.map(({ id, movie }) => {
+            const entry = data.history.find((item) => item.videoId === String(id));
+            const subtitle = entry && entry.progress >= 1
+              ? 'Concluído'
+              : entry?.timestamp
+                ? `Continuar em ${formatWatchTime(entry.timestamp)}`
+                : `${Math.round((entry?.progress ?? 0) * 100)}% assistido`;
+            return <VideoCard key={id} video={movie ?? { id, title: `Filme ${id}` }} subtitle={subtitle} />;
+          })}
     </Section>
   );
 };
@@ -203,9 +202,9 @@ const PreferencesForm = ({ initialPreferences }: { initialPreferences: Record<st
 
   const mutation = useMutation({
     mutationFn: () => userService.updatePreferences({ language, theme }),
-    onSuccess: async () => {
+    onSuccess: () => {
       client.invalidateQueries({ queryKey: ['profile'] });
-      await refreshProfile();
+      refreshProfile();
     },
   });
 

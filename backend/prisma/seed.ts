@@ -5,8 +5,18 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@cryoflix.io';
-  const adminPassword = process.env.ADMIN_PASSWORD ?? 'Admin@CryoFlix2024!';
+  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
+    throw new Error('Defina ADMIN_EMAIL com um e-mail válido antes de executar o seed.');
+  }
+  if (
+    !adminPassword || adminPassword.length < 12 ||
+    !/[a-z]/.test(adminPassword) || !/[A-Z]/.test(adminPassword) ||
+    !/[0-9]/.test(adminPassword) || !/[^A-Za-z0-9]/.test(adminPassword)
+  ) {
+    throw new Error('Defina ADMIN_PASSWORD com ao menos 12 caracteres, maiúscula, minúscula, número e símbolo.');
+  }
   const adminHash = await bcrypt.hash(adminPassword, 12);
 
   await prisma.user.upsert({
@@ -31,33 +41,6 @@ async function main() {
     },
   });
 
-  const demoEmail = 'demo@cryoflix.io';
-  const demoPassword = 'Sup3rSecret!';
-  const demoHash = await bcrypt.hash(demoPassword, 12);
-
-  await prisma.user.upsert({
-    where: { email: demoEmail },
-    update: {
-      passwordHash: demoHash,
-      status: AccountStatus.ACTIVE,
-      emailVerified: true,
-      emailVerifyToken: null,
-      emailVerifyExpires: null,
-    },
-    create: {
-      email: demoEmail,
-      username: 'demo',
-      displayName: 'Demo CryoFlix',
-      passwordHash: demoHash,
-      role: Role.USER,
-      status: AccountStatus.ACTIVE,
-      emailVerified: true,
-      preferences: {
-        language: 'pt-BR',
-        theme: 'light',
-      },
-    },
-  });
 }
 
 main()

@@ -67,7 +67,7 @@ inconsistências de autorização listadas em `INVENTARIO.md` (ex:
   os testes em cima de dado real.
 - `e2e/.env.test` (novo, local — git-ignored; `e2e/.env.test.example` vai pro
   git) define:
-  - `TEST_DATABASE_URL=postgresql://cryoflix:cryoflix123@localhost:5433/cryoflix_test`
+  - `TEST_DATABASE_URL` deve conter a conexão local configurada pelo desenvolvedor, terminando em `/cryoflix_test`, sem senha compartilhada no repositório.
   - `BACKEND_TEST_PORT=4010` (isolada da porta de dev, 4000/3333 — nunca
     reaproveita um backend de dev já rodando)
   - `FRONTEND_TEST_PORT=5183`

@@ -43,7 +43,7 @@ const cacheProvider: ICacheProvider = getCacheProvider();
 const movieRepository: IMovieRepository = new MovieRepository(tmdbClient);
 const subtitleRepository: ISubtitleRepository = new SubtitleRepository(openSubtitlesAdapter);
 const playerRepository: IPlayerRepository = usePrisma
-  ? new PlayerRepository(superEmbedAdapter, prisma, userRepository)
+  ? new PlayerRepository(superEmbedAdapter, prisma)
   : new InMemoryPlayerRepository(superEmbedAdapter);
 
 export const container = {

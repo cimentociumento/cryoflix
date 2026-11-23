@@ -25,7 +25,7 @@ que é o próprio objetivo desta fase, já aprovado.
 ## Global Constraints
 
 - O Postgres de `docker-compose.yml` (serviço `postgres`, container
-  `cryoflix-postgres`, usuário `cryoflix` / senha `cryoflix123`, banco
+  `cryoflix-postgres`, usuário e senha definidos no `.env` local, banco
   `cryoflix`) precisa estar rodando (`docker compose up -d postgres` na raiz)
   antes de qualquer tarefa que toque o banco de teste (Tasks 3+). O host
   expõe a porta em **5433**, não 5432 — nesta máquina de dev já existe um
@@ -107,7 +107,7 @@ que é o próprio objetivo desta fase, já aprovado.
 # TEST_DATABASE_URL precisa terminar em /cryoflix_test — o setup do banco
 # de teste recusa rodar (de propósito) se apontar para qualquer outro banco.
 # Porta 5433 (não 5432): ver Global Constraints no topo do plano.
-TEST_DATABASE_URL=postgresql://cryoflix:cryoflix123@localhost:5433/cryoflix_test
+TEST_DATABASE_URL=
 BACKEND_TEST_PORT=4010
 FRONTEND_TEST_PORT=5183
 ```
@@ -262,12 +262,12 @@ test.describe('assertTestDatabaseUrl', () => {
 
   test('rejeita quando a URL aponta para o banco de dev', () => {
     expect(() =>
-      assertTestDatabaseUrl('postgresql://cryoflix:cryoflix123@localhost:5433/cryoflix'),
+      assertTestDatabaseUrl('postgresql://localhost:5433/cryoflix'),
     ).toThrow('cryoflix_test');
   });
 
   test('aceita e devolve a URL quando aponta para cryoflix_test', () => {
-    const url = 'postgresql://cryoflix:cryoflix123@localhost:5433/cryoflix_test';
+    const url = 'postgresql://localhost:5433/cryoflix_test';
     expect(assertTestDatabaseUrl(url)).toBe(url);
   });
 });

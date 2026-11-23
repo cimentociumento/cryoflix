@@ -28,7 +28,7 @@ export class JWTService implements ITokenService {
   }
 
   verifyRefreshToken(token: string): JwtPayload {
-    return jwt.verify(token, env.refreshSecret as jwt.Secret) as JwtPayload;
+    return jwt.verify(token, env.refreshSecret as jwt.Secret, { algorithms: ['HS256'] }) as JwtPayload;
   }
 }
 

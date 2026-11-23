@@ -12,10 +12,17 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       return;
     }
 
-    const [, token] = authHeader.split(' ');
-
-    const decoded = jwt.verify(token, env.jwtSecret) as jwt.JwtPayload;
-    const userId = decoded.sub as string;
+    const match = /^Bearer\s+(\S+)$/i.exec(authHeader);
+    if (!match) {
+      res.status(401).json({ message: 'Formato de autenticação inválido' });
+      return;
+    }
+    const decoded = jwt.verify(match[1], env.jwtSecret, { algorithms: ['HS256'] });
+    if (typeof decoded === 'string' || typeof decoded.sub !== 'string' || !decoded.sub) {
+      res.status(401).json({ message: 'Token inválido' });
+      return;
+    }
+    const userId = decoded.sub;
 
     const user = await container.userRepository.findById(userId);
     if (!user || user.deletedAt) {

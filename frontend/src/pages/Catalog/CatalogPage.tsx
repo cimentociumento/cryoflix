@@ -32,13 +32,7 @@ export const CatalogPage = () => {
     retry: false,
   });
 
-  const {
-    data: movies = [],
-    isFetching,
-    isError,
-    isSuccess,
-    refetch,
-  } = useQuery({
+  const { data: movies = [], isFetching, isError, isSuccess, refetch } = useQuery({
     queryKey: ['movies', 'search', query],
     queryFn: () => (query ? metadataService.search(query) : metadataService.getTrending()),
     retry: false,
@@ -89,8 +83,8 @@ export const CatalogPage = () => {
           title="Recomendados para você"
           description={
             lastWatchedMovieId
-              ? 'Baseado no último título marcado como concluído.'
-              : 'Marque um título como concluído para gerar recomendações.'
+              ? 'Baseado no último título assistido.'
+              : 'Assista a um título para gerar recomendações.'
           }
         >
           {loadingRecommended ? (
@@ -109,15 +103,13 @@ export const CatalogPage = () => {
                   </Button>
                 </div>
               ) : null}
-              {recommended.slice(0, 8).map((movie) => (
-                <VideoCard key={movie.id} video={movie} />
-              ))}
+              {recommended.slice(0, 8).map((movie) => <VideoCard key={movie.id} video={movie} />)}
               {!recommended.length && !recommendedError ? (
                 <div className="auth-panel">
                   <p style={{ margin: 0, opacity: 0.8 }}>
                     {lastWatchedMovieId
                       ? 'Nenhuma recomendação disponível para este título.'
-                      : 'Ainda não há recomendações. Conclua um título e volte aqui.'}
+                      : 'Ainda não há recomendações. Assista a um título e volte aqui.'}
                   </p>
                 </div>
               ) : null}
@@ -139,11 +131,6 @@ export const CatalogPage = () => {
             Tentar novamente
           </Button>
         </div>
-      ) : null}
-      {hideMovieMutation.isError ? (
-        <p role="alert" className="status error">
-          Não foi possível salvar sua preferência. Tente ocultar o filme novamente.
-        </p>
       ) : null}
       <div className="catalog-grid">
         {visibleMovies.map((movie) => (

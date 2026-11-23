@@ -1,0 +1,5 @@
+flower.mp4
+Vídeo de exemplo CC0 publicado pela MDN em seu diretório cc0-videos.
+Origem: https://github.com/mdn/interactive-examples/tree/main/live-examples/media/cc0-videos
+Arquivo: https://raw.githubusercontent.com/mdn/interactive-examples/main/live-examples/media/cc0-videos/flower.mp4
+Uso: teste automatizado do player HTML5, sem depender de serviços externos.

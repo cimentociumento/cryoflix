@@ -35,10 +35,3 @@ export async function submitLoginForm(
 export async function expectFormError(page: Page, text: string): Promise<void> {
   await expect(page.locator('.status.error')).toHaveText(text);
 }
-
-export async function expectRegistrationSuccess(page: Page): Promise<void> {
-  await expect(page.locator('.status.success')).toHaveText(
-    'Conta criada! Verifique seu e-mail para confirmar o cadastro antes de entrar.',
-  );
-  await expect(page.locator('.status.error')).toHaveCount(0);
-}

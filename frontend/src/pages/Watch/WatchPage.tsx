@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { VideoCard } from '../../components/VideoCard/VideoCard';
 import { Button } from '../../shared/components/Button/Button';
 import { Modal } from '../../shared/components/Modal/Modal';
 import { PlayerApiSelector, type StreamingApi } from './components/PlayerApiSelector';
+import { WatchProgressPanel } from './components/WatchProgressPanel';
+import { HttpError } from '../../shared/api/httpClient';
 import {
   metadataService,
   playerService,
@@ -17,17 +19,20 @@ export const WatchPage = () => {
   const { videoId } = useParams<{ videoId: string }>();
   const navigate = useNavigate();
   const movieId = Number(videoId);
-  const isValidId = Number.isFinite(movieId);
+  const isValidId = Number.isInteger(movieId) && movieId > 0;
   const { user, refreshProfile } = useAuth();
 
   const {
     data: movie,
     isLoading: loadingMovie,
     isError: movieError,
+    error: movieLoadError,
+    refetch: refetchMovie,
   } = useQuery({
     queryKey: ['metadata', movieId],
     queryFn: () => metadataService.getMovie(movieId),
     enabled: isValidId,
+    retry: false,
   });
 
   const {
@@ -38,7 +43,7 @@ export const WatchPage = () => {
   } = useQuery({
     queryKey: ['player', movie?.id ?? movieId, movie?.imdbId],
     queryFn: () => playerService.getEmbed(movie!.id, movie?.imdbId ?? undefined),
-    enabled: Boolean(movie) && isValidId,
+    enabled: Boolean(movie && user) && isValidId,
     retry: 0,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -60,30 +65,6 @@ export const WatchPage = () => {
     queryFn: () => subtitleService.search({ movieId }),
     enabled: Boolean(movie),
   });
-
-  const progressQuery = useQuery({
-    queryKey: ['progress', movieId, user?.id],
-    queryFn: () => playerService.getProgress(movieId),
-    enabled: Boolean(user && movie),
-    retry: 0,
-  });
-
-  const saveProgress = useMutation({
-    mutationFn: (progress: number) =>
-      playerService.saveProgress({ movieId, progress }),
-    onSuccess: () => {
-      progressQuery.refetch();
-      // Atualiza o perfil em memória para refletir o histórico no Home
-      refreshProfile();
-    },
-  });
-
-  const progressPercent = useMemo(() => {
-    if (!progressQuery.data) {
-      return 0;
-    }
-    return Math.round(progressQuery.data.progress * 100);
-  }, [progressQuery.data]);
 
   const [isApiSelectorOpen, setIsApiSelectorOpen] = useState(false);
 
@@ -114,7 +95,15 @@ export const WatchPage = () => {
   }
 
   if (movieError || !movie) {
-    return <p>Não encontramos esse título nos metadados.</p>;
+    const missing = movieLoadError instanceof HttpError && movieLoadError.status === 404;
+    return (
+      <div className="page-stack" role="alert">
+        <p>{missing ? 'Filme não encontrado.' : 'Não foi possível carregar os dados do filme. Tente novamente.'}</p>
+        {!missing ? <Button onClick={() => void refetchMovie()}>Tentar carregar filme novamente</Button> : null}
+        <Button variant="secondary" onClick={() => navigate('/catalog')}>Voltar ao catálogo</Button>
+        {user ? <WatchProgressPanel key={`${user.id}:${movieId}`} movieId={movieId} userId={user.id} refreshProfile={refreshProfile} /> : null}
+      </div>
+    );
   }
 
   if (!user) {
@@ -227,18 +216,10 @@ export const WatchPage = () => {
                   </span>
                 )}
               </div>
-              <div className="player-actions">
-                <Button
-                  onClick={() => saveProgress.mutate(1)}
-                  disabled={saveProgress.isPending}
-                >
-                  Marcar como concluído
-                </Button>
-                <span>Progresso: {progressPercent}%</span>
-              </div>
             </div>
           </>
         )}
+        <WatchProgressPanel key={`${user.id}:${movieId}`} movieId={movieId} userId={user.id} refreshProfile={refreshProfile} />
         <section className="subtitles">
           <h3>Legendas PT-BR</h3>
           {loadingSubtitles ? (

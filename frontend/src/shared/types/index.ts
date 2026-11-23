@@ -22,7 +22,7 @@ export type UserProfile = {
   status?: string;
   emailVerified?: boolean;
   preferences: Record<string, unknown>;
-  history: Array<{ videoId: string; watchedAt: string; progress: number }>;
+  history: Array<{ videoId: string; watchedAt: string; progress: number; timestamp?: number }>;
 };
 
 export type PlaybackSession = {
@@ -57,6 +57,7 @@ export type EmbedSource = {
 export type WatchProgress = {
   movieId: number;
   progress: number;
+  timestamp: number;
   updatedAt?: string;
 };
 

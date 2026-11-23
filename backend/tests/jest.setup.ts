@@ -1,4 +1,5 @@
 process.env.REDIS_ENABLED = 'false';
-// Os testes da API usam repositórios em memória, mesmo quando há um .env local.
+// A suíte HTTP é isolada dos dados e das credenciais presentes no .env local.
 process.env.DATABASE_URL = '';
+process.env.NODE_ENV = 'test';
 

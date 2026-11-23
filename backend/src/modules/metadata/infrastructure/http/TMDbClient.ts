@@ -1,18 +1,8 @@
+import { z } from 'zod';
 import { HttpClient } from '../../../../shared/infrastructure/http/HttpClient';
+import { HttpClientError } from '../../../../shared/infrastructure/http/HttpClientError';
 import { env } from '../../../../config/environment';
 import { logger } from '../../../../shared/utils/logger';
-
-type SearchResponse = {
-  results: TMDbMovie[];
-};
-
-type TrendingResponse = {
-  results: TMDbMovie[];
-};
-
-type RecommendationResponse = {
-  results: TMDbMovie[];
-};
 
 export type TMDbExternalIds = {
   imdb_id?: string | null;
@@ -34,160 +24,116 @@ export type TMDbMovie = {
   external_ids?: TMDbExternalIds;
 };
 
-export class TMDbClient {
-  private readonly http = env.tmdb.apiKey
-    ? HttpClient.create({
-        baseURL: env.tmdb.baseUrl,
-        params: {
-          api_key: env.tmdb.apiKey,
-          language: 'pt-BR',
-        },
-      })
-    : null;
+const movieSchema = z.object({
+  id: z.number().int().positive(),
+  title: z.string().min(1),
+  overview: z.string().nullable().optional(),
+  release_date: z.string().nullable().optional(),
+  poster_path: z.string().nullable().optional(),
+  backdrop_path: z.string().nullable().optional(),
+  vote_average: z.number().optional(),
+  genre_ids: z.array(z.number().int()).optional(),
+  genres: z.array(z.object({ id: z.number().int() })).optional(),
+  external_ids: z.object({
+    imdb_id: z.string().nullable().optional(),
+    facebook_id: z.string().nullable().optional(),
+    instagram_id: z.string().nullable().optional(),
+    twitter_id: z.string().nullable().optional(),
+    wikidata_id: z.string().nullable().optional(),
+  }).optional(),
+});
 
-  constructor() {
-    if (!env.tmdb.apiKey) {
-      logger.error('TMDB_API_KEY não configurada');
-    } else {
-      logger.info('TMDb Client inicializado com API key');
+const unavailableMessage = 'O serviço de filmes está indisponível. Tente novamente em instantes.';
+const invalidResponseMessage = 'O serviço de filmes retornou uma resposta inválida. Tente novamente.';
+
+export class TMDbClient {
+  constructor(
+    private readonly http: Pick<HttpClient, 'get'> | null = env.tmdb.apiKey
+      ? HttpClient.create({
+          baseURL: env.tmdb.baseUrl,
+          // Responder ao frontend antes do timeout de cinco segundos dele.
+          timeout: 4000,
+          params: { api_key: env.tmdb.apiKey, language: 'pt-BR' },
+        })
+      : null,
+  ) {}
+
+  private async request(
+    path: string,
+    params?: Record<string, string | number>,
+    movieCanBeMissing = false,
+  ): Promise<unknown> {
+    if (!this.http) {
+      throw new HttpClientError(unavailableMessage, 503);
     }
+
+    try {
+      return await this.http.get<unknown>(path, { params });
+    } catch (error) {
+      const status = error instanceof HttpClientError ? error.status : undefined;
+      logger.warn({ path, upstreamStatus: status }, 'Falha ao consultar o serviço de filmes');
+
+      if (movieCanBeMissing && status === 404) {
+        throw new HttpClientError('Filme não encontrado.', 404);
+      }
+
+      // Uma chave inválida e o limite do provedor são problemas da integração,
+      // não da sessão do usuário. Não repassar 401 para renovar o login.
+      const unavailable = !status || status >= 500 || [401, 403, 429].includes(status);
+      throw new HttpClientError(
+        unavailable ? unavailableMessage : invalidResponseMessage,
+        unavailable ? 503 : 502,
+      );
+    }
+  }
+
+  private parseMovie(value: unknown): TMDbMovie {
+    const result = movieSchema.safeParse(value);
+    if (!result.success) {
+      throw new HttpClientError(invalidResponseMessage, 502);
+    }
+    const movie = result.data;
+    return {
+      ...movie,
+      overview: movie.overview ?? '',
+      release_date: movie.release_date ?? undefined,
+      vote_average: movie.vote_average ?? 0,
+      genre_ids: movie.genre_ids ?? movie.genres?.map((genre) => genre.id) ?? [],
+    };
+  }
+
+  private parseList(response: unknown): TMDbMovie[] {
+    const result = z.object({ results: z.array(z.unknown()) }).safeParse(response);
+    if (!result.success) {
+      throw new HttpClientError(invalidResponseMessage, 502);
+    }
+    return result.data.results.map((movie) => this.parseMovie(movie));
   }
 
   async searchMovies(query: string, page: number): Promise<TMDbMovie[]> {
-    const http = this.http;
-    if (!http) {
-      logger.error('TMDb indisponível: API key ausente');
-      return [];
-    }
-    try {
-      logger.debug({ query, page }, 'TMDb searchMovies: buscando filmes');
-      const response = await http.get<SearchResponse>('/search/movie', {
-        params: { query, page },
-      });
-      // Verificar se results existe e é um array
-      if (!response || !response.results || !Array.isArray(response.results)) {
-        logger.warn({ query, page, response }, 'TMDb searchMovies: resposta inválida');
-        return [];
-      }
-      logger.info({ query, count: response.results.length }, 'TMDb searchMovies: filmes encontrados');
-      return response.results;
-    } catch (error: any) {
-      logger.error({
-        query,
-        page,
-        message: error.message,
-        status: error.status,
-        data: error.cause,
-      }, 'TMDb searchMovies error');
-      // Retornar array vazio ao invés de lançar erro
-      return [];
-    }
+    return this.parseList(await this.request('/search/movie', { query, page }));
   }
 
   async getMovieDetails(id: number): Promise<TMDbMovie | null> {
-    const http = this.http;
-    if (!http) {
-      logger.error({ id }, 'TMDb indisponível: API key ausente');
-      return null;
-    }
+    let response: unknown;
     try {
-      // Usar append_to_response para buscar external_ids (inclui IMDB ID)
-      // Isso é importante para o SuperEmbed funcionar melhor
-      // Quando append_to_response é usado, a resposta vem com external_ids como objeto separado
-      // A estrutura é: { id, title, ..., external_ids: { imdb_id, ... } }
-      const response = await http.get<any>(`/movie/${id}`, {
-        params: { append_to_response: 'external_ids' },
-      });
-      
-      // Verificar se a resposta é válida
-      if (!response || !response.id) {
-        logger.warn({ id, response }, 'TMDb getMovieDetails: resposta inválida');
-        return null;
-      }
-      
-      // Extrair external_ids da resposta (pode vir como objeto separado quando append_to_response é usado)
-      const externalIds = response.external_ids || {};
-      
-      // Mapear a resposta para o tipo esperado
-      const movie: TMDbMovie = {
-        id: response.id,
-        title: response.title || '',
-        overview: response.overview || '',
-        release_date: response.release_date,
-        poster_path: response.poster_path,
-        backdrop_path: response.backdrop_path,
-        vote_average: response.vote_average || 0,
-        genre_ids: response.genre_ids || [],
-        external_ids: {
-          imdb_id: externalIds.imdb_id || null,
-          facebook_id: externalIds.facebook_id || null,
-          instagram_id: externalIds.instagram_id || null,
-          twitter_id: externalIds.twitter_id || null,
-          wikidata_id: externalIds.wikidata_id || null,
-        },
-      };
-      
-      logger.debug({ movieId: id, imdbId: movie.external_ids?.imdb_id }, 'TMDb getMovieDetails: filme encontrado');
-      return movie;
-    } catch (error: any) {
-      logger.error({
-        id,
-        message: error.message,
-        status: error.status,
-        data: error.cause,
-      }, 'TMDb getMovieDetails error');
-      return null;
+      response = await this.request('/movie/' + id, { append_to_response: 'external_ids' }, true);
+    } catch (error) {
+      if (error instanceof HttpClientError && error.status === 404) return null;
+      throw error;
     }
+    const movie = this.parseMovie(response);
+    if (movie.id !== id) {
+      throw new HttpClientError(invalidResponseMessage, 502);
+    }
+    return movie;
   }
 
   async getTrending(): Promise<TMDbMovie[]> {
-    const http = this.http;
-    if (!http) {
-      logger.error('TMDb indisponível: API key ausente');
-      return [];
-    }
-    try {
-      const response = await http.get<TrendingResponse>('/trending/movie/day');
-      if (!response || !response.results || !Array.isArray(response.results)) {
-        logger.warn({ response }, 'TMDb getTrending: resposta inválida');
-        return [];
-      }
-      logger.info({ count: response.results.length }, 'TMDb getTrending: filmes encontrados');
-      return response.results;
-    } catch (error: any) {
-      logger.error({
-        message: error.message,
-        status: error.status,
-        data: error.cause,
-      }, 'TMDb getTrending error');
-      return [];
-    }
+    return this.parseList(await this.request('/trending/movie/day'));
   }
 
   async getRecommendations(id: number): Promise<TMDbMovie[]> {
-    const http = this.http;
-    if (!http) {
-      logger.error({ id }, 'TMDb indisponível: API key ausente');
-      return [];
-    }
-    try {
-      const response = await http.get<RecommendationResponse>(`/movie/${id}/recommendations`);
-      if (!response || !response.results || !Array.isArray(response.results)) {
-        logger.warn({ id, response }, 'TMDb getRecommendations: resposta inválida');
-        return [];
-      }
-      logger.info({ id, count: response.results.length }, 'TMDb getRecommendations: recomendações encontradas');
-      return response.results;
-    } catch (error: any) {
-      logger.error({
-        id,
-        message: error.message,
-        status: error.status,
-        data: error.cause,
-      }, 'TMDb getRecommendations error');
-      return [];
-    }
+    return this.parseList(await this.request('/movie/' + id + '/recommendations', undefined, true));
   }
 }
-
-

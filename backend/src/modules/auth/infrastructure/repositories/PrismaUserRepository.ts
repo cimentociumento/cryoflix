@@ -1,4 +1,4 @@
-import type { PrismaClient, User as PrismaUserRow } from '@prisma/client';
+import type { PrismaClient, User as PrismaUserRow, WatchProgress } from '@prisma/client';
 import { AccountStatus, Role } from '@prisma/client';
 import { User, type UserProps, type WatchHistoryEntry } from '../../domain/entities/User';
 import type { DomainAccountStatus, DomainRole } from '../../domain/types/AccountTypes';
@@ -8,8 +8,16 @@ import { NotFoundError } from '../../../../shared/domain/errors/NotFoundError';
 const CF_HISTORY_KEY = '__cf';
 
 type CfPayload = {
-  history?: Array<{ videoId: string; watchedAt: string; progress: number }>;
+  history?: Array<{ videoId: string; watchedAt: string; progress: number; timestamp?: number }>;
 };
+
+// WatchProgress é a fonte persistente para títulos parciais e concluídos.
+// O histórico legado em preferences continua disponível para contas antigas.
+const withWatchHistory = {
+  watchProgress: { orderBy: { updatedAt: 'desc' as const }, take: 50 },
+};
+
+type UserWithWatchHistory = PrismaUserRow & { watchProgress?: WatchProgress[] };
 
 function splitPreferences(raw: unknown): { preferences: Record<string, unknown>; history: WatchHistoryEntry[] } {
   const obj = (raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}) as Record<string, unknown>;
@@ -23,6 +31,7 @@ function splitPreferences(raw: unknown): { preferences: Record<string, unknown>;
       videoId: h.videoId,
       watchedAt: new Date(h.watchedAt),
       progress: h.progress,
+      timestamp: h.timestamp ?? 0,
     })) ?? [];
   return { preferences, history };
 }
@@ -38,6 +47,7 @@ function mergePreferencesForDb(
         videoId: h.videoId,
         watchedAt: h.watchedAt.toISOString(),
         progress: h.progress,
+        timestamp: h.timestamp ?? 0,
       })),
     },
   };
@@ -116,6 +126,7 @@ export class PrismaUserRepository implements IUserRepository {
   async findByEmail(email: string): Promise<User | null> {
     const row = await this.prisma.user.findFirst({
       where: { email, deletedAt: null },
+      include: withWatchHistory,
     });
     return row ? this.mapRowToUser(row) : null;
   }
@@ -123,6 +134,7 @@ export class PrismaUserRepository implements IUserRepository {
   async findById(id: string): Promise<User | null> {
     const row = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
+      include: withWatchHistory,
     });
     return row ? this.mapRowToUser(row) : null;
   }
@@ -130,6 +142,7 @@ export class PrismaUserRepository implements IUserRepository {
   async findByUsername(username: string): Promise<User | null> {
     const row = await this.prisma.user.findFirst({
       where: { username, deletedAt: null },
+      include: withWatchHistory,
     });
     return row ? this.mapRowToUser(row) : null;
   }
@@ -137,6 +150,7 @@ export class PrismaUserRepository implements IUserRepository {
   async findByEmailVerifyToken(token: string): Promise<User | null> {
     const row = await this.prisma.user.findFirst({
       where: { emailVerifyToken: token, deletedAt: null },
+      include: withWatchHistory,
     });
     return row ? this.mapRowToUser(row) : null;
   }
@@ -144,6 +158,7 @@ export class PrismaUserRepository implements IUserRepository {
   async findByPasswordResetToken(token: string): Promise<User | null> {
     const row = await this.prisma.user.findFirst({
       where: { passwordResetToken: token, deletedAt: null },
+      include: withWatchHistory,
     });
     return row ? this.mapRowToUser(row) : null;
   }
@@ -202,6 +217,7 @@ export class PrismaUserRepository implements IUserRepository {
   async list(): Promise<User[]> {
     const rows = await this.prisma.user.findMany({
       where: { deletedAt: null },
+      include: withWatchHistory,
     });
     return rows.map((r) => this.mapRowToUser(r));
   }
@@ -217,8 +233,21 @@ export class PrismaUserRepository implements IUserRepository {
     await this.update(user.withHistory(next));
   }
 
-  private mapRowToUser(row: PrismaUserRow): User {
-    const { preferences, history } = splitPreferences(row.preferences);
+  private mapRowToUser(row: UserWithWatchHistory): User {
+    const { preferences, history: legacyHistory } = splitPreferences(row.preferences);
+    const persistedHistory = (row.watchProgress ?? [])
+      .filter((item) => item.progress > 0 || item.timestamp > 0)
+      .map((item) => ({
+        videoId: item.movieId,
+        watchedAt: item.updatedAt,
+        progress: item.progress / 100,
+        timestamp: item.timestamp,
+      }));
+    const persistedIds = new Set((row.watchProgress ?? []).map((item) => item.movieId));
+    const history = [
+      ...persistedHistory,
+      ...legacyHistory.filter((item) => !persistedIds.has(item.videoId)),
+    ].sort((a, b) => b.watchedAt.getTime() - a.watchedAt.getTime()).slice(0, 50);
 
     const props: UserProps = {
       email: row.email,
