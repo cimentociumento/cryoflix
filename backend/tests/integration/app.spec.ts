@@ -83,6 +83,31 @@ describe('FFlix API', () => {
     );
   });
 
+  it('logout revoga o refresh token enviado pelo cookie', async () => {
+    jest.spyOn(EmailService.prototype, 'isConfigured').mockReturnValueOnce(false);
+    const email = `test+logout+${Date.now()}@fflix.io`;
+    const password = 'Sup3rSecret!';
+    await request(app).post('/api/auth/register').send({ email, password, name: 'Logout' });
+    const agent = request.agent(app);
+    const login = await agent.post('/api/auth/login').send({ email, password });
+    expect(login.status).toBe(200);
+    const cookie = String(login.headers['set-cookie']);
+    expect(cookie).toContain('cryoflix_refresh=');
+    expect(cookie).toContain('Path=/api/auth;');
+
+    const logout = await agent
+      .post('/api/auth/logout')
+      .set('Authorization', `Bearer ${login.body.accessToken}`)
+      .send({});
+    expect(logout.status).toBe(200);
+
+    const refreshAfterLogout = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', `cryoflix_refresh=${login.body.refreshToken}`)
+      .send({});
+    expect(refreshAfterLogout.status).toBe(401);
+  });
+
   it('lists catalog content', async () => {
     const response = await request(app).get('/api/content');
     expect(response.status).toBe(200);

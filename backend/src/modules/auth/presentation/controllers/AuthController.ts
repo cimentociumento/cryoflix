@@ -19,6 +19,27 @@ import {
   resetPasswordSchema,
 } from '../validators/authValidators';
 
+// O cookie precisa chegar em /refresh e /logout; com path só em /refresh o
+// logout não recebia o token e não conseguia revogá-lo no servidor.
+const REFRESH_COOKIE_PATH = '/api/auth';
+const LEGACY_REFRESH_COOKIE_PATH = '/api/auth/refresh';
+
+const setRefreshCookie = (res: Response, token: string): void => {
+  res.clearCookie('cryoflix_refresh', { path: LEGACY_REFRESH_COOKIE_PATH });
+  res.cookie('cryoflix_refresh', token, {
+    httpOnly: true,
+    secure: env.nodeEnv === 'production',
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: REFRESH_COOKIE_PATH,
+  });
+};
+
+const clearRefreshCookie = (res: Response): void => {
+  res.clearCookie('cryoflix_refresh', { path: REFRESH_COOKIE_PATH });
+  res.clearCookie('cryoflix_refresh', { path: LEGACY_REFRESH_COOKIE_PATH });
+};
+
 export class AuthController {
   constructor(
     private readonly registerUser: RegisterUserUseCase,
@@ -43,13 +64,7 @@ export class AuthController {
       userAgent: req.get('user-agent') ?? undefined,
       ipAddress: req.ip,
     });
-    res.cookie('cryoflix_refresh', refreshToken, {
-      httpOnly: true,
-      secure: env.nodeEnv === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/api/auth/refresh',
-    });
+    setRefreshCookie(res, refreshToken);
   }
 
   register = async (req: Request, res: Response): Promise<void> => {
@@ -83,22 +98,14 @@ export class AuthController {
         ipAddress: req.ip,
       },
     );
-    res.cookie('cryoflix_refresh', tokens.refreshToken, {
-      httpOnly: true,
-      secure: env.nodeEnv === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/api/auth/refresh',
-    });
+    setRefreshCookie(res, tokens.refreshToken);
     res.status(StatusCodes.OK).json(tokens);
   };
 
   logout = async (req: Request, res: Response): Promise<void> => {
     const refreshToken = req.cookies?.cryoflix_refresh ?? (req.body?.refreshToken as string | undefined);
     await this.logoutUC.execute(refreshToken);
-    res.clearCookie('cryoflix_refresh', {
-      path: '/api/auth/refresh',
-    });
+    clearRefreshCookie(res);
     res.status(StatusCodes.OK).json({ message: 'Logout realizado' });
   };
 
