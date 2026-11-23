@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { env } from '../../../../config/environment';
+import { NotFoundError } from '../../../../shared/domain/errors/NotFoundError';
 
 type PlaybackSession = {
   id: string;
@@ -29,11 +30,16 @@ export class StreamingService {
     return session;
   }
 
-  heartbeat(sessionId: string): PlaybackSession {
+  getSession(sessionId: string): PlaybackSession {
     const session = this.sessions.get(sessionId);
     if (!session) {
-      throw new Error('Sessão não encontrada');
+      throw new NotFoundError('Sessão', sessionId);
     }
+    return session;
+  }
+
+  heartbeat(sessionId: string): PlaybackSession {
+    const session = this.getSession(sessionId);
     session.lastHeartbeat = new Date();
     return session;
   }

@@ -66,6 +66,8 @@ export class PlayerController {
     await this.saveWatchProgress.execute({
       movieId: payload.movieId,
       progress: payload.progress,
+      timestamp: payload.timestamp,
+      recordedAt: payload.recordedAt,
       userId,
     });
 
@@ -81,6 +83,6 @@ export class PlayerController {
     }
 
     const progress = await this.repository.getProgress(userId, movieId);
-    res.status(StatusCodes.OK).json(progress ?? { movieId, progress: 0 });
+    res.status(StatusCodes.OK).json(progress ?? { movieId, progress: 0, timestamp: 0 });
   };
 }

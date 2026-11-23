@@ -4,6 +4,7 @@ export interface PlayerProgress {
   movieId: number;
   userId: string;
   progress: number;
+  timestamp: number;
   updatedAt: Date;
 }
 

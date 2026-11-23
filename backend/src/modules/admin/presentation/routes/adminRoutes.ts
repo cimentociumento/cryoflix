@@ -51,9 +51,9 @@ const movieController = new AdminMovieController(listBlockedMovies, blockMovie, 
 
 export const adminRoutes = Router();
 
-adminRoutes.use(requireDb);
 adminRoutes.use(authMiddleware);
 adminRoutes.use(authorize('ADMIN'));
+adminRoutes.use(requireDb);
 
 adminRoutes.get('/dashboard', safeHandler(dashboardController.dashboard));
 adminRoutes.get('/users', safeHandler(userController.list));

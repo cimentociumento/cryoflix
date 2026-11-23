@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { Entity } from '../../../../shared/domain/Entity';
 import type { DomainAccountStatus, DomainRole } from '../types/AccountTypes';
 
-export type WatchHistoryEntry = { videoId: string; watchedAt: Date; progress: number };
+export type WatchHistoryEntry = { videoId: string; watchedAt: Date; progress: number; timestamp?: number };
 
 export type UserProps = {
   email: string;
@@ -144,6 +144,7 @@ export class User extends Entity<UserProps> {
         videoId: h.videoId,
         watchedAt: h.watchedAt.toISOString(),
         progress: h.progress,
+        timestamp: h.timestamp ?? 0,
       })),
       lastLoginAt: this.lastLoginAt?.toISOString() ?? null,
       createdAt: this.createdAt.toISOString(),

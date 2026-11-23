@@ -19,7 +19,7 @@ export class GetMovieDetails {
   ) {}
 
   async execute({ id }: Params): Promise<Movie> {
-    if (!Number.isFinite(id) || id <= 0) {
+    if (!Number.isInteger(id) || id <= 0) {
       throw new ValidationError('ID de filme inválido');
     }
 
@@ -29,11 +29,11 @@ export class GetMovieDetails {
 
     const cacheKey = `metadata:movie:${id}`;
     const cached = await this.cache.get<any>(cacheKey);
-    if (cached && cached.tmdbId) {
+    if (cached) {
       // Restaurar entidade Movie do cache
       // O cache retorna um objeto plano (JSON), precisamos reconstruir a entidade
       // Verificar se tem todos os campos necessários
-      if (cached.title && cached.tmdbId) {
+      if (cached.title && cached.tmdbId === id) {
         return Movie.restore(
           {
             tmdbId: cached.tmdbId || cached.id,

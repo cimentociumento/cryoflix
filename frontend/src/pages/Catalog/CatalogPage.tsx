@@ -18,17 +18,24 @@ export const CatalogPage = () => {
     return Number.isFinite(id) && id > 0 ? id : null;
   }, [user?.history]);
 
-  const { data: recommended = [], isFetching: fetchingRecommended } = useQuery({
+  const {
+    data: recommended = [],
+    isLoading: loadingRecommended,
+    isFetching: fetchingRecommended,
+    isError: recommendedError,
+    refetch: refetchRecommended,
+  } = useQuery({
     queryKey: ['recommended', user?.id, lastWatchedMovieId],
     enabled: Boolean(user?.id && lastWatchedMovieId && !query),
     queryFn: () => metadataService.getRecommendations(lastWatchedMovieId!),
     staleTime: 5 * 60_000,
+    retry: false,
   });
 
-  const { data: movies = [], isFetching } = useQuery({
+  const { data: movies = [], isFetching, isError, isSuccess, refetch } = useQuery({
     queryKey: ['movies', 'search', query],
     queryFn: () => (query ? metadataService.search(query) : metadataService.getTrending()),
-    enabled: true,
+    retry: false,
   });
 
   const hiddenMovieIds = useMemo(() => {
@@ -82,26 +89,61 @@ export const CatalogPage = () => {
           title="Recomendados para você"
           description={
             lastWatchedMovieId
-              ? 'Baseado no último título marcado como concluído.'
-              : 'Marque um título como concluído para gerar recomendações.'
+              ? 'Baseado no último título assistido.'
+              : 'Assista a um título para gerar recomendações.'
           }
         >
-          {fetchingRecommended ? (
+          {loadingRecommended ? (
             [...Array(4)].map((_, index) => (
               <div className="aspect-[2/3] animate-pulse rounded-lg bg-velvet" key={index} />
             ))
-          ) : recommended.length ? (
-            recommended.slice(0, 8).map((movie) => <VideoCard key={movie.id} video={movie} />)
           ) : (
-            <div className="rounded-xl border border-white/10 bg-velvet p-6">
-              <p className="text-sm text-smoke">
-                Ainda não há recomendações. Conclua um título e volte aqui.
-              </p>
-            </div>
+            <>
+              {recommendedError ? (
+                <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border border-white/10 bg-velvet p-4">
+                  <p className="text-sm text-bone">
+                    Não foi possível carregar as recomendações. Tente novamente.
+                  </p>
+                  <Button
+                    variant="secondary"
+                    onClick={() => void refetchRecommended()}
+                    disabled={fetchingRecommended}
+                  >
+                    Tentar carregar recomendações novamente
+                  </Button>
+                </div>
+              ) : null}
+              {recommended.slice(0, 8).map((movie) => <VideoCard key={movie.id} video={movie} />)}
+              {!recommended.length && !recommendedError ? (
+                <div className="rounded-xl border border-white/10 bg-velvet p-4">
+                  <p className="text-sm text-smoke">
+                    {lastWatchedMovieId
+                      ? 'Nenhuma recomendação disponível para este título.'
+                      : 'Ainda não há recomendações. Assista a um título e volte aqui.'}
+                  </p>
+                </div>
+              ) : null}
+            </>
           )}
         </Section>
       ) : null}
-      {isFetching ? <p className="text-sm text-smoke">Carregando conteúdo...</p> : null}
+      {isFetching ? (
+        <p role="status" className="text-sm text-smoke">
+          {movies.length ? 'Atualizando conteúdo...' : 'Carregando conteúdo...'}
+        </p>
+      ) : null}
+      {isError ? (
+        <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border border-white/10 bg-velvet p-4">
+          <p className="text-sm text-bone">
+            {movies.length
+              ? 'Não foi possível atualizar o catálogo. Os últimos resultados continuam abaixo.'
+              : 'Não foi possível carregar o catálogo. Verifique a conexão e tente novamente.'}
+          </p>
+          <Button variant="secondary" onClick={() => void refetch()} disabled={isFetching}>
+            Tentar novamente
+          </Button>
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {visibleMovies.map((movie) => (
           <div key={movie.id}>
@@ -118,9 +160,13 @@ export const CatalogPage = () => {
             ) : null}
           </div>
         ))}
-        {!visibleMovies.length && !isFetching ? (
+        {isSuccess && !visibleMovies.length && !isFetching ? (
           <p className="text-sm text-smoke">
-            {query ? 'Nenhum filme encontrado. Tente outra busca.' : 'Digite um termo para buscar filmes.'}
+            {movies.length
+              ? 'Todos os filmes desta lista estão ocultos pelas suas preferências.'
+              : query
+                ? 'Nenhum filme encontrado. Tente outra busca.'
+                : 'Nenhum filme disponível no momento.'}
           </p>
         ) : null}
       </div>

@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { authService, userService } from '../../services/api';
+import { tokenStore } from '../../shared/api/tokenStore';
 import type { UserProfile } from '../../shared/types';
 
 type AuthContextValue = {
@@ -16,24 +17,11 @@ type AuthContextValue = {
   isAdmin: boolean;
   login: (credentials: { email: string; password: string }) => Promise<void>;
   register: (payload: { email: string; password: string; name: string }) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-const ACCESS_TOKEN_KEY = 'fflix_access_token';
-const REFRESH_TOKEN_KEY = 'fflix_refresh_token';
-
-const persistTokens = (accessToken: string, refreshToken: string) => {
-  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-};
-
-const clearTokens = () => {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
-};
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -43,37 +31,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const profile = await userService.getProfile();
       setUser(profile);
-    } catch (error) {
-      // Se o erro for 401 ou 404, limpa os tokens
-      // Outros erros podem ser temporários
-      if (error instanceof Error && error.message.includes('401')) {
-        clearTokens();
-        setUser(null);
-      } else if (error instanceof Error && error.message.includes('404')) {
-        // Usuário não encontrado - token pode ser inválido
-        clearTokens();
-        setUser(null);
-      } else {
-        // Outros erros - mantém token mas não define usuário
-        setUser(null);
-      }
+    } catch {
+      // Sem access token válido em memória e sem cookie de refresh
+      // aproveitável (httpClient já tentou renovar sozinho) — sem sessão.
+      tokenStore.set(null);
+      setUser(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    // Access token só existe na memória do processo — some a cada reload.
+    // A tentativa abaixo dispara 401 se não houver token, e o httpClient
+    // tenta renovar sozinho via cookie httpOnly antes de desistir; é assim
+    // que a sessão sobrevive a um F5 sem token nenhum guardado no client.
     fetchProfile();
   }, [fetchProfile]);
 
   const login = useCallback(async ({ email, password }: { email: string; password: string }) => {
-    const { accessToken, refreshToken } = await authService.login({ email, password });
-    persistTokens(accessToken, refreshToken);
+    const { accessToken } = await authService.login({ email, password });
+    tokenStore.set(accessToken);
     await fetchProfile();
   }, [fetchProfile]);
 
@@ -85,9 +63,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     [login],
   );
 
-  const logout = useCallback(() => {
-    clearTokens();
-    setUser(null);
+  const logout = useCallback(async () => {
+    try {
+      await authService.logout();
+    } catch {
+      // Best-effort: mesmo se a chamada falhar, limpa o estado local.
+    } finally {
+      tokenStore.set(null);
+      setUser(null);
+    }
   }, []);
 
   const refreshProfile = useCallback(async () => {

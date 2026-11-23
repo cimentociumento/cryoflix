@@ -1,5 +1,4 @@
 import { randomUUID } from 'crypto';
-import { hashSync } from 'bcryptjs';
 
 export type UserRecord = {
   id: string;
@@ -21,7 +20,7 @@ export type UserRecord = {
   lastLoginAt: Date | null;
   deletedAt: Date | null;
   preferences: Record<string, unknown>;
-  history: Array<{ videoId: string; watchedAt: Date; progress: number }>;
+  history: Array<{ videoId: string; watchedAt: Date; progress: number; timestamp?: number }>;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -48,6 +47,7 @@ export type WatchProgressRecord = {
   userId: string;
   movieId: number;
   progress: number; // 0-1
+  timestamp: number;
   updatedAt: Date;
 };
 
@@ -71,38 +71,7 @@ export class InMemoryDatabase {
   }
 
   private seed(): void {
-    const userId = randomUUID();
     const videoId = randomUUID();
-    const subscriptionId = randomUUID();
-    const now = new Date();
-
-    this.users.set(userId, {
-      id: userId,
-      email: 'demo@fflix.io',
-      username: 'demo_legacy',
-      displayName: 'Demo User',
-      avatarUrl: null,
-      bio: null,
-      passwordHash: hashSync('Sup3rSecret!', 10),
-      role: 'USER',
-      status: 'ACTIVE',
-      emailVerified: true,
-      emailVerifyToken: null,
-      emailVerifyExpires: null,
-      passwordResetToken: null,
-      passwordResetExpires: null,
-      failedLoginAttempts: 0,
-      lockedUntil: null,
-      lastLoginAt: null,
-      deletedAt: null,
-      preferences: { language: 'pt-BR', theme: 'light' },
-      history: [
-        { videoId: '550', watchedAt: now, progress: 0.8 },
-        { videoId: '680', watchedAt: now, progress: 0.5 },
-      ],
-      createdAt: now,
-      updatedAt: now,
-    });
 
     this.videos.set(videoId, {
       id: videoId,
@@ -112,14 +81,6 @@ export class InMemoryDatabase {
       status: 'published',
       duration: 600,
       formats: ['mp4', 'hls'],
-    });
-
-    this.subscriptions.set(subscriptionId, {
-      id: subscriptionId,
-      userId,
-      plan: 'premium',
-      status: 'active',
-      renewsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
   }
 }

@@ -14,6 +14,8 @@ export const embedQuerySchema = z.object({
 export const progressSchema = z.object({
   movieId: z.number().int().positive(),
   progress: z.number().min(0).max(1),
+  timestamp: z.number().int().min(0).max(2_147_483_647).default(0),
+  recordedAt: z.string().datetime().optional(),
 });
 
 

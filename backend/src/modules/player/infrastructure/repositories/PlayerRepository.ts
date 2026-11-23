@@ -1,5 +1,4 @@
 import type { PrismaClient } from '@prisma/client';
-import type { IUserRepository } from '../../../auth/domain/repositories/IUserRepository';
 import { IPlayerRepository, PlayerProgress } from '../../domain/repositories/IPlayerRepository';
 import { SuperEmbedAdapter } from '../adapters/SuperEmbedAdapter';
 import { VideoQuality, VideoSource } from '../../domain/entities/VideoSource';
@@ -9,7 +8,6 @@ export class PlayerRepository implements IPlayerRepository {
   constructor(
     private readonly adapter: SuperEmbedAdapter,
     private readonly prisma: PrismaClient,
-    private readonly userRepository: IUserRepository,
   ) {}
 
   async getEmbedSource(movieId: number, imdbId?: string): Promise<VideoSource> {
@@ -21,32 +19,30 @@ export class PlayerRepository implements IPlayerRepository {
     const movieIdStr = String(progress.movieId);
     const progressPct = Math.min(100, Math.max(0, progress.progress * 100));
 
-    await this.prisma.watchProgress.upsert({
-      where: {
-        userId_movieId: {
+    // Eventos podem chegar fora de ordem quando a página fecha. O horário
+    // capturado no evento impede um POST antigo de sobrescrever o ponto novo.
+    await this.prisma.$transaction([
+      this.prisma.watchProgress.createMany({
+        data: {
+          id: randomUUID(),
           userId: progress.userId,
           movieId: movieIdStr,
+          progress: progressPct,
+          timestamp: progress.timestamp,
+          updatedAt: progress.updatedAt,
         },
-      },
-      create: {
-        id: randomUUID(),
-        userId: progress.userId,
-        movieId: movieIdStr,
-        progress: progressPct,
-        timestamp: 0,
-      },
-      update: {
-        progress: progressPct,
-      },
-    });
+        skipDuplicates: true,
+      }),
+      this.prisma.watchProgress.updateMany({
+        where: {
+          userId: progress.userId,
+          movieId: movieIdStr,
+          updatedAt: { lte: progress.updatedAt },
+        },
+        data: { progress: progressPct, timestamp: progress.timestamp, updatedAt: progress.updatedAt },
+      }),
+    ]);
 
-    if (progress.progress >= 1) {
-      await this.userRepository.appendWatchHistory(progress.userId, {
-        videoId: movieIdStr,
-        watchedAt: new Date(),
-        progress: 1,
-      });
-    }
   }
 
   async getProgress(userId: string, movieId: number): Promise<PlayerProgress | null> {
@@ -65,6 +61,7 @@ export class PlayerRepository implements IPlayerRepository {
       userId: row.userId,
       movieId: Number(row.movieId),
       progress: row.progress / 100,
+      timestamp: row.timestamp,
       updatedAt: row.updatedAt,
     };
   }

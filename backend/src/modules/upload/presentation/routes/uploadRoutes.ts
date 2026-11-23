@@ -10,5 +10,5 @@ const controller = new UploadController(uploadService);
 export const uploadRoutes = Router();
 
 uploadRoutes.post('/signed-url', authMiddleware, safeHandler(controller.signedUrl));
-uploadRoutes.post('/callback', safeHandler(controller.callback));
+uploadRoutes.post('/callback', authMiddleware, safeHandler(controller.callback));
 

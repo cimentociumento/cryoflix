@@ -48,5 +48,9 @@ export const authService = {
     const q = encodeURIComponent(token);
     return httpClient<{ message: string }>(`/auth/verify-email?token=${q}`);
   },
+
+  async logout() {
+    return httpClient<{ message: string }>('/auth/logout', { method: 'POST' });
+  },
 };
 

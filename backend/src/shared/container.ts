@@ -45,7 +45,7 @@ const movieRepository: IMovieRepository = new MovieRepository(tmdbClient);
 const blockedMoviesFilter = new BlockedMoviesFilter(usePrisma ? prisma : null);
 const subtitleRepository: ISubtitleRepository = new SubtitleRepository(openSubtitlesAdapter);
 const playerRepository: IPlayerRepository = usePrisma
-  ? new PlayerRepository(superEmbedAdapter, prisma, userRepository)
+  ? new PlayerRepository(superEmbedAdapter, prisma)
   : new InMemoryPlayerRepository(superEmbedAdapter);
 
 export const container = {

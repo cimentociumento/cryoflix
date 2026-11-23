@@ -16,8 +16,8 @@ const controller = new PlayerController(
 
 export const playerRoutes = Router();
 
-playerRoutes.get('/:movieId/embed', safeHandler(controller.getEmbed));
 playerRoutes.use(authMiddleware);
+playerRoutes.get('/:movieId/embed', safeHandler(controller.getEmbed));
 playerRoutes.post('/progress', safeHandler(controller.saveProgress));
 playerRoutes.get('/:movieId/progress', safeHandler(controller.getProgress));
 

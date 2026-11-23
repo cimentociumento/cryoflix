@@ -11,9 +11,17 @@ import { LoginForm } from '../../features/auth/components/LoginForm/LoginForm';
 export const HomePage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: trending = [], isLoading: loadingTrending } = useQuery({
+  const {
+    data: trending = [],
+    isLoading: loadingTrending,
+    isFetching: fetchingTrending,
+    isError: trendingError,
+    isSuccess: trendingSuccess,
+    refetch: refetchTrending,
+  } = useQuery({
     queryKey: ['movies', 'trending'],
     queryFn: () => metadataService.getTrending(),
+    retry: false,
   });
 
   const featured = trending[0];
@@ -31,19 +39,40 @@ export const HomePage = () => {
         }
       />
       <div className="grid gap-8 lg:grid-cols-[2fr_1fr] lg:items-start">
-        <Section title="Em Alta" description="Filmes populares do TMDb.">
-          {loadingTrending
-            ? [...Array(4)].map((_, index) => (
-                <div className="aspect-[2/3] animate-pulse rounded-lg bg-velvet" key={index} />
-              ))
-            : trending.map((movie) => <VideoCard key={movie.id} video={movie} />)}
-        </Section>
+        <div className="flex flex-col gap-4">
+          {trendingError ? (
+            <div
+              className="flex flex-col items-start gap-3 rounded-xl border border-white/10 bg-velvet p-4"
+              role="alert"
+            >
+              <p className="text-sm text-bone">
+                Não foi possível carregar os filmes em alta. Tente novamente em instantes.
+                {trending.length ? ' Os últimos resultados continuam disponíveis.' : ''}
+              </p>
+              <Button
+                variant="secondary"
+                disabled={fetchingTrending}
+                onClick={() => void refetchTrending()}
+              >
+                Tentar novamente
+              </Button>
+            </div>
+          ) : null}
+          <Section title="Em Alta" description="Filmes populares do TMDb.">
+            {loadingTrending
+              ? [...Array(4)].map((_, index) => (
+                  <div className="aspect-[2/3] animate-pulse rounded-lg bg-velvet" key={index} />
+                ))
+              : trending.map((movie) => <VideoCard key={movie.id} video={movie} />)}
+          </Section>
+          {trendingSuccess && !trending.length && !fetchingTrending ? (
+            <p className="text-sm text-smoke">Nenhum filme disponível no momento.</p>
+          ) : null}
+        </div>
         {!user ? (
           <aside className="rounded-xl border border-white/10 bg-velvet p-6">
             <h3 className="font-display text-xl text-bone">Entrar ou criar conta</h3>
-            <p className="mt-1 text-sm text-smoke">
-              Use o e-mail demo ou cadastre um novo streaming user.
-            </p>
+            <p className="mt-1 text-sm text-smoke">Entre com sua conta ou crie um cadastro.</p>
             <div className="mt-4">
               <LoginForm />
             </div>

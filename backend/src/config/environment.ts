@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { randomBytes } from 'crypto';
 import type { StringValue } from 'ms';
 
 dotenv.config();
@@ -11,16 +12,47 @@ const getEnv = (key: string, fallback?: string): string => {
   return value;
 };
 
+const nodeEnv = getEnv('NODE_ENV', 'development');
+
+// Em desenvolvimento/teste, a ausência de uma chave cria uma chave efêmera.
+// Produção sempre exige chaves próprias e não aceita exemplos previsíveis.
+const getSecret = (key: string): string => {
+  const value = process.env[key]?.trim();
+  if (value) {
+    if (
+      nodeEnv === 'production' &&
+      (value.length < 32 || /^(change|troque|super[-_]|replace|your[-_])/i.test(value))
+    ) {
+      throw new Error(`${key} must contain at least 32 characters from a generated secret`);
+    }
+    return value;
+  }
+  if (nodeEnv === 'production') {
+    throw new Error(`Missing environment variable: ${key}`);
+  }
+  return randomBytes(48).toString('base64url');
+};
+
+const jwtSecret = getSecret('JWT_SECRET');
+const refreshSecret = getSecret('REFRESH_SECRET');
+if (nodeEnv === 'production' && jwtSecret === refreshSecret) {
+  throw new Error('JWT_SECRET and REFRESH_SECRET must be different');
+}
+const databaseUrl = getEnv('DATABASE_URL', '').trim();
+if (nodeEnv === 'production' && !databaseUrl) {
+  throw new Error('Missing environment variable: DATABASE_URL');
+}
+
 export const env = {
-  nodeEnv: getEnv('NODE_ENV', 'development'),
+  nodeEnv,
   port: Number(getEnv('PORT', '4000')),
-  jwtSecret: getEnv('JWT_SECRET', 'super-secret-key'),
+  jwtSecret,
   jwtExpiresIn: getEnv('JWT_EXPIRES_IN', '15m') as StringValue,
-  refreshSecret: getEnv('REFRESH_SECRET', 'super-refresh-key'),
+  refreshSecret,
   refreshExpiresIn: getEnv('REFRESH_EXPIRES_IN', '7d') as StringValue,
   cdnBaseUrl: getEnv('CDN_BASE_URL', 'https://cdn.cryoflix.local'),
   tmdb: {
-    apiKey: getEnv('TMDB_API_KEY', 'f99c004fcfba174823fb96e5b41ef707'),
+    apiKey: getEnv('TMDB_API_KEY', ''),
     baseUrl: getEnv('TMDB_BASE_URL', 'https://api.themoviedb.org/3'),
   },
   superEmbed: {
@@ -51,7 +83,7 @@ export const env = {
   adminUrl: getEnv('ADMIN_URL', 'http://localhost:5174'),
   apiUrl: getEnv('API_URL', 'http://localhost:4000'),
   adminSeed: {
-    email: getEnv('ADMIN_EMAIL', 'admin@cryoflix.io'),
-    password: getEnv('ADMIN_PASSWORD', 'Admin@CryoFlix2024!'),
+    email: getEnv('ADMIN_EMAIL', ''),
+    password: getEnv('ADMIN_PASSWORD', ''),
   },
 };

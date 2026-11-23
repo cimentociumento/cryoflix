@@ -1,13 +1,19 @@
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { TranscodingService } from '../../application/services/TranscodingService';
+import { enqueueJobSchema } from '../validators/transcodingValidators';
+
+const DEFAULT_RENDITIONS = ['240p', '480p', '1080p'];
 
 export class TranscodingController {
   constructor(private readonly transcodingService: TranscodingService) {}
 
   enqueue = async (req: Request, res: Response): Promise<void> => {
-    const { uploadJobId, renditions = ['240p', '480p', '1080p'] } = req.body;
-    const job = this.transcodingService.enqueueJob(uploadJobId, renditions);
+    const payload = enqueueJobSchema.parse(req.body);
+    const job = this.transcodingService.enqueueJob(
+      payload.uploadJobId,
+      payload.renditions ?? DEFAULT_RENDITIONS,
+    );
     res.status(StatusCodes.ACCEPTED).json(job);
   };
 

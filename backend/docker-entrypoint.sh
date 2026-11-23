@@ -1,6 +1,13 @@
 #!/bin/sh
 set -e
 
+if [ "$NODE_ENV" = "production" ]; then
+  : "${DATABASE_URL:?Defina DATABASE_URL para persistencia em producao}"
+  : "${JWT_SECRET:?Defina JWT_SECRET em producao}"
+  : "${REFRESH_SECRET:?Defina REFRESH_SECRET em producao}"
+  node -e "require('./dist/config/environment')"
+fi
+
 if [ -n "$DATABASE_URL" ]; then
   echo "[entrypoint] Applying Prisma migrations..."
   npx prisma migrate deploy

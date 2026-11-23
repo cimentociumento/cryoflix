@@ -8,12 +8,21 @@ export class RecommendationController {
   constructor(private readonly recommendationService: RecommendationService) {}
 
   list = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const userId = (req.params.userId as string | undefined) ?? req.user?.sub;
-    if (!userId) {
+    const authenticatedUserId = req.user?.sub;
+    if (!authenticatedUserId) {
       res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Usuário não autenticado' });
       return;
     }
-    const recommendations = this.recommendationService.getRecommendations(userId);
+
+    const requestedUserId = req.params.userId as string | undefined;
+    if (requestedUserId && requestedUserId !== authenticatedUserId) {
+      res.status(StatusCodes.FORBIDDEN).json({
+        message: 'Não é possível acessar recomendações de outro usuário',
+      });
+      return;
+    }
+
+    const recommendations = this.recommendationService.getRecommendations(authenticatedUserId);
     res.status(StatusCodes.OK).json(recommendations);
   };
 

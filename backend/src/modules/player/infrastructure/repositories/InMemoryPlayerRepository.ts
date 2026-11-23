@@ -15,28 +15,24 @@ export class InMemoryPlayerRepository implements IPlayerRepository {
 
   async saveProgress(progress: PlayerProgress): Promise<void> {
     const key = `${progress.userId}:${progress.movieId}`;
+    const existing = this.db.watchProgress.get(key);
+    if (existing && existing.updatedAt > progress.updatedAt) return;
     this.db.watchProgress.set(key, {
       userId: progress.userId,
       movieId: progress.movieId,
       progress: progress.progress,
-      updatedAt: new Date(),
+      timestamp: progress.timestamp,
+      updatedAt: progress.updatedAt,
     });
 
-    if (progress.progress >= 1) {
-      const user = this.db.users.get(progress.userId);
-      if (user) {
-        const videoId = String(progress.movieId);
-        const existingIndex = user.history.findIndex((item) => item.videoId === videoId);
-        const entry = { videoId, watchedAt: new Date(), progress: 1 };
-
-        if (existingIndex >= 0) {
-          user.history.splice(existingIndex, 1);
-        }
-
-        user.history.unshift(entry);
-        const nextHistory = user.history.slice(0, 50);
-        this.db.users.set(progress.userId, { ...user, history: nextHistory });
+    const user = this.db.users.get(progress.userId);
+    if (user) {
+      const videoId = String(progress.movieId);
+      const nextHistory = user.history.filter((item) => item.videoId !== videoId);
+      if (progress.progress > 0 || progress.timestamp > 0) {
+        nextHistory.unshift({ videoId, watchedAt: progress.updatedAt, progress: progress.progress, timestamp: progress.timestamp });
       }
+      this.db.users.set(progress.userId, { ...user, history: nextHistory.slice(0, 50) });
     }
   }
 
@@ -50,6 +46,7 @@ export class InMemoryPlayerRepository implements IPlayerRepository {
       userId: record.userId,
       movieId: record.movieId,
       progress: record.progress,
+      timestamp: record.timestamp,
       updatedAt: record.updatedAt,
     };
   }
