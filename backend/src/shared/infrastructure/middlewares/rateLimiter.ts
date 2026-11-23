@@ -20,3 +20,13 @@ export const authSensitiveRateLimiter = rateLimit({
   },
 });
 
+export const metadataRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: 'Muitas requisições de metadados. Tente novamente em instantes.',
+  },
+});
+

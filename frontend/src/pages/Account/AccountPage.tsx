@@ -103,8 +103,8 @@ const ProfileSection = ({
         Bio
         <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} />
       </label>
-      <Button type="submit" disabled={mutation.isLoading}>
-        {mutation.isLoading ? 'Salvando...' : 'Salvar perfil'}
+      <Button type="submit" disabled={mutation.isPending}>
+        {mutation.isPending ? 'Salvando...' : 'Salvar perfil'}
       </Button>
       {mutation.isSuccess ? <span className="status success">Perfil atualizado!</span> : null}
     </form>
@@ -208,8 +208,8 @@ const PreferencesForm = ({ initialPreferences }: { initialPreferences: Record<st
           <option value="light">Claro</option>
         </select>
       </label>
-      <Button type="submit" disabled={mutation.isLoading}>
-        {mutation.isLoading ? 'Salvando...' : 'Salvar preferências'}
+      <Button type="submit" disabled={mutation.isPending}>
+        {mutation.isPending ? 'Salvando...' : 'Salvar preferências'}
       </Button>
       {mutation.isSuccess ? <span className="status success">Preferências atualizadas!</span> : null}
       {mutation.isError ? (

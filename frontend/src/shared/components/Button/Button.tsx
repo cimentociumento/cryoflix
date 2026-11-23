@@ -6,8 +6,8 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   icon?: ReactNode;
 };
 
-export const Button = ({ variant = 'primary', icon, children, ...props }: ButtonProps) => (
-  <button className={`${styles.button} ${styles[variant]}`} {...props}>
+export const Button = ({ variant = 'primary', icon, children, className, ...props }: ButtonProps) => (
+  <button className={`${styles.button} ${styles[variant]} ${className ?? ''}`} {...props}>
     {icon}
     {children}
   </button>

@@ -10,7 +10,9 @@
     "lint": "npx eslint . --ext .ts",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:integrations": "ts-node scripts/test-integrations.ts"
+    "test:integrations": "ts-node scripts/test-integrations.ts",
+    "postinstall": "prisma generate",
+    "vercel-build": "DATABASE_URL=${DATABASE_URL_UNPOOLED:-$DATABASE_URL} prisma migrate deploy && tsc"
   },
   "prisma": {
     "seed": "ts-node --transpile-only prisma/seed.ts"
@@ -21,7 +23,6 @@
   "type": "commonjs",
   "dependencies": {
     "@prisma/client": "5.22.0",
-    "prisma": "5.22.0",
     "axios": "^1.7.7",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
@@ -38,6 +39,7 @@
     "nodemailer": "^8.0.7",
     "pino": "^10.1.0",
     "pino-pretty": "^13.1.2",
+    "prisma": "5.22.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^13.0.0",

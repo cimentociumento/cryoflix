@@ -3,6 +3,10 @@ import { env } from '../../config/environment';
 import { logger } from '../utils/logger';
 
 export class EmailService {
+  isConfigured(): boolean {
+    return Boolean(env.smtp.host && env.smtp.user);
+  }
+
   private createTransport() {
     if (!env.smtp.host || !env.smtp.user) {
       return null;

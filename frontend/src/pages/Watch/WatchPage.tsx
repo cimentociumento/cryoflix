@@ -10,7 +10,6 @@ import {
   metadataService,
   playerService,
   subtitleService,
-  tmdbService,
 } from '../../services/api';
 
 export const WatchPage = () => {
@@ -46,8 +45,8 @@ export const WatchPage = () => {
   });
 
   const { data: brazilDubInfo } = useQuery({
-    queryKey: ['tmdb-brazil-dub', movie?.id],
-    queryFn: () => tmdbService.getBrazilianDubInfoByMovieId(movie!.id),
+    queryKey: ['brazilian-dub', movie?.id],
+    queryFn: () => metadataService.getBrazilianDubInfo(movie!.id),
     enabled: Boolean(movie?.id),
     staleTime: 24 * 60 * 60 * 1000, // 24h
   });
@@ -106,56 +105,42 @@ export const WatchPage = () => {
   };
 
   if (!videoId || !isValidId) {
-    return <p>Selecione um conteúdo válido para assistir.</p>;
+    return <p className="text-smoke">Selecione um conteúdo válido para assistir.</p>;
   }
 
   if (loadingMovie) {
-    return <p>Carregando informações do título...</p>;
+    return <p className="text-smoke">Carregando informações do título...</p>;
   }
 
   if (movieError || !movie) {
-    return <p>Não encontramos esse título nos metadados.</p>;
+    return <p className="text-smoke">Não encontramos esse título nos metadados.</p>;
   }
 
   if (!user) {
     return (
-      <div className="page-stack">
-        <h2>Faça login para assistir</h2>
-        <p>Entre com sua conta para iniciar a sessão segura de streaming.</p>
+      <div className="flex flex-col gap-3">
+        <h2 className="font-display text-2xl text-bone">Faça login para assistir</h2>
+        <p className="text-smoke">Entre com sua conta para iniciar a sessão segura de streaming.</p>
       </div>
     );
   }
 
   return (
-    <div className="watch-layout">
-      <section className="player-panel">
+    <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
+      <section className="flex flex-col gap-8">
         {loadingEmbed ? (
-          <p>Preparando player seguro...</p>
+          <p className="text-smoke">Preparando player seguro...</p>
         ) : embedError || !embedSource ? (
-          <div>
-            <p>Não foi possível gerar o embed do player.</p>
+          <div className="flex flex-col items-start gap-3">
+            <p className="text-smoke">Não foi possível gerar o embed do player.</p>
             <Button variant="secondary" onClick={() => refetchEmbed()}>
               Tentar novamente
             </Button>
           </div>
         ) : (
           <>
-            <div
-              style={{
-                width: '100%',
-                minHeight: '60vh',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                borderRadius: '12px',
-                padding: '3rem 2rem',
-                textAlign: 'center',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-              }}
-            >
-              <div style={{ marginBottom: '2rem' }}>
+            <div className="flex w-full min-h-[60vh] flex-col items-center justify-center rounded-xl border border-white/10 bg-black/50 px-8 py-12 text-center">
+              <div className="mb-8">
                 <svg
                   width="64"
                   height="64"
@@ -165,14 +150,12 @@ export const WatchPage = () => {
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  style={{ color: '#1b6eea', marginBottom: '1rem' }}
+                  className="mb-4 text-marquee"
                 >
                   <polygon points="5 3 19 12 5 21 5 3"></polygon>
                 </svg>
-                <h2 style={{ marginBottom: '0.5rem', fontSize: '1.5rem' }}>
-                  Assistir {movie.title}
-                </h2>
-                <p style={{ opacity: 0.8, fontSize: '0.95rem', marginBottom: '1.5rem' }}>
+                <h2 className="mb-2 text-2xl">Assistir {movie.title}</h2>
+                <p className="mb-6 text-[0.95rem] opacity-80">
                   Clique no botão abaixo para escolher uma API de streaming
                 </p>
               </div>
@@ -187,7 +170,7 @@ export const WatchPage = () => {
                 ▶ Assistir Agora
               </Button>
               {embedSource.quality && (
-                <p style={{ marginTop: '1rem', opacity: 0.6, fontSize: '0.85rem' }}>
+                <p className="mt-4 text-[0.85rem] opacity-60">
                   Qualidade: {embedSource.quality}
                 </p>
               )}
@@ -206,48 +189,51 @@ export const WatchPage = () => {
                 onClose={() => setIsApiSelectorOpen(false)}
               />
             </Modal>
-            <div className="player-meta">
-              <h1>{movie.title}</h1>
-              <p>{movie.overview}</p>
-              <small>
+            <div className="flex flex-col gap-2">
+              <h1 className="font-display text-3xl text-bone">{movie.title}</h1>
+              <p className="text-smoke">{movie.overview}</p>
+              <small className="text-xs text-smoke">
                 Lançamento:{' '}
                 {movie.releaseDate
                   ? new Date(movie.releaseDate).toLocaleDateString('pt-BR')
                   : 'Indisponível'}{' '}
                 • Nota TMDb: {movie.voteAverage.toFixed(1)}
               </small>
-              <div style={{ marginTop: '0.25rem', marginBottom: '0.75rem' }}>
+              <div className="mb-2">
                 {brazilDubInfo?.hasBrazilianDub ? (
-                  <span style={{ fontSize: '0.85rem', color: '#4caf50' }}>
+                  <span className="text-[0.85rem] text-gold">
                     Dublagem BR oficial disponível (dados TMDB)
                   </span>
                 ) : (
-                  <span style={{ fontSize: '0.85rem', opacity: 0.6 }}>
+                  <span className="text-[0.85rem] text-smoke">
                     Informação de dublagem BR oficial indisponível
                   </span>
                 )}
               </div>
-              <div className="player-actions">
+              <div className="flex items-center gap-4">
                 <Button
                   onClick={() => saveProgress.mutate(1)}
                   disabled={saveProgress.isPending}
                 >
                   Marcar como concluído
                 </Button>
-                <span>Progresso: {progressPercent}%</span>
+                <span className="text-sm text-smoke">Progresso: {progressPercent}%</span>
               </div>
             </div>
           </>
         )}
-        <section className="subtitles">
-          <h3>Legendas PT-BR</h3>
+        <section className="flex flex-col gap-3">
+          <h3 className="font-display text-xl text-bone">Legendas PT-BR</h3>
           {loadingSubtitles ? (
-            <p>Buscando legendas...</p>
+            <p className="text-smoke">Buscando legendas...</p>
           ) : subtitles.length ? (
-            <ul>
+            <ul className="flex flex-col gap-2">
               {subtitles.map((subtitle) => (
-                <li key={subtitle.id}>
-                  <span>
+                <li
+                  key={subtitle.id}
+                  className="flex items-center justify-between gap-4 rounded-lg border border-white/10 bg-velvet px-4 py-3"
+                >
+                  <span className="text-sm text-smoke">
                     {subtitle.format.toUpperCase()} •{' '}
                     {subtitle.isHighQuality ? 'Alta qualidade' : 'Disponível'} •{' '}
                     {subtitle.downloadCount} downloads
@@ -256,6 +242,7 @@ export const WatchPage = () => {
                     href={subtitleService.getDownloadUrl(subtitle.fileId)}
                     target="_blank"
                     rel="noreferrer"
+                    className="text-sm font-medium text-marquee hover:underline"
                   >
                     Baixar
                   </a>
@@ -263,12 +250,12 @@ export const WatchPage = () => {
               ))}
             </ul>
           ) : (
-            <p>Nenhuma legenda em PT-BR encontrada.</p>
+            <p className="text-smoke">Nenhuma legenda em PT-BR encontrada.</p>
           )}
         </section>
       </section>
-      <aside className="recommendations">
-        <h3>Recomendações</h3>
+      <aside className="flex flex-col gap-4">
+        <h3 className="font-display text-xl text-bone">Recomendações</h3>
         <Recommendations movieId={movieId} />
       </aside>
     </div>
@@ -283,22 +270,21 @@ const Recommendations = ({ movieId }: { movieId: number }) => {
   });
 
   if (isLoading) {
-    return <p>Carregando recomendações...</p>;
+    return <p className="text-smoke">Carregando recomendações...</p>;
   }
 
   if (!recommendations.length) {
-    return <p>Nenhum título relacionado no momento.</p>;
+    return <p className="text-smoke">Nenhum título relacionado no momento.</p>;
   }
 
   return (
-    <div className="section-grid">
+    <div className="grid grid-cols-2 gap-4">
       {recommendations.slice(0, 4).map((recommendation) => (
         <VideoCard
           key={recommendation.id}
           video={{
             id: recommendation.id,
             title: recommendation.title,
-            description: recommendation.overview,
             posterUrl: recommendation.posterUrl ?? undefined,
           }}
           subtitle={recommendation.isHighRated ? 'Alta avaliação' : undefined}

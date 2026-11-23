@@ -4,6 +4,7 @@ import { SearchMovies } from '../../application/use-cases/SearchMovies';
 import { GetMovieDetails } from '../../application/use-cases/GetMovieDetails';
 import { GetTrendingMovies } from '../../application/use-cases/GetTrendingMovies';
 import { GetRecommendations } from '../../application/use-cases/GetRecommendations';
+import { GetBrazilianDubInfo } from '../../application/use-cases/GetBrazilianDubInfo';
 import {
   movieIdParamSchema,
   searchMoviesSchema,
@@ -15,6 +16,7 @@ export class MovieController {
     private readonly getMovieDetails: GetMovieDetails,
     private readonly getTrendingMovies: GetTrendingMovies,
     private readonly getRecommendations: GetRecommendations,
+    private readonly getBrazilianDubInfo: GetBrazilianDubInfo,
   ) {}
 
   private serialize(movie: unknown) {
@@ -57,6 +59,12 @@ export class MovieController {
     const { id } = movieIdParamSchema.parse(req.params);
     const movies = await this.getRecommendations.execute({ movieId: id });
     res.status(StatusCodes.OK).json(movies.map((movie) => this.serialize(movie)));
+  };
+
+  brazilianDub = async (req: Request, res: Response): Promise<void> => {
+    const { id } = movieIdParamSchema.parse(req.params);
+    const info = await this.getBrazilianDubInfo.execute({ id });
+    res.status(StatusCodes.OK).json(info);
   };
 }
 

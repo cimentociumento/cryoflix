@@ -1,6 +1,7 @@
 import { IMovieRepository } from '../../domain/repositories/IMovieRepository';
 import { Movie } from '../../domain/entities/Movie';
 import { ICacheProvider } from '../../../../shared/infrastructure/cache';
+import { BlockedMoviesFilter } from '../../infrastructure/services/BlockedMoviesFilter';
 import { logger } from '../../../../shared/utils/logger';
 
 type Params = {
@@ -14,6 +15,7 @@ export class SearchMovies {
   constructor(
     private readonly repository: IMovieRepository,
     private readonly cache: ICacheProvider,
+    private readonly blockedFilter: BlockedMoviesFilter,
   ) {}
 
   async execute({ query, page = 1 }: Params): Promise<Movie[]> {
@@ -24,9 +26,11 @@ export class SearchMovies {
 
     const cacheKey = `metadata:search:${normalized.toLowerCase()}:${page}`;
     const cached = await this.cache.get<any>(cacheKey);
+    let result: Movie[];
+
     if (cached && Array.isArray(cached) && cached.length > 0) {
       // Restaurar entidades Movie do cache
-      return cached.map((item: any) => {
+      result = cached.map((item: any) => {
         if (item instanceof Movie) {
           return item;
         }
@@ -46,24 +50,24 @@ export class SearchMovies {
           String(item.tmdbId || item.id),
         );
       });
+    } else {
+      result = await this.repository.search(normalized, page);
+
+      logger.debug({ query: normalized, page, count: result.length }, 'SearchMovies: resultados da busca');
+
+      // Armazenar JSONs no cache, não instâncias
+      if (result.length > 0) {
+        await this.cache.set(
+          cacheKey,
+          result.map((movie) => movie.toJSON()),
+          SearchMovies.CACHE_TTL,
+        );
+      } else {
+        logger.warn({ query: normalized, page }, 'SearchMovies: nenhum resultado encontrado');
+      }
     }
 
-    const result = await this.repository.search(normalized, page);
-    
-    logger.debug({ query: normalized, page, count: result.length }, 'SearchMovies: resultados da busca');
-    
-    // Armazenar JSONs no cache, não instâncias
-    if (result.length > 0) {
-      await this.cache.set(
-        cacheKey,
-        result.map((movie) => movie.toJSON()),
-        SearchMovies.CACHE_TTL,
-      );
-    } else {
-      logger.warn({ query: normalized, page }, 'SearchMovies: nenhum resultado encontrado');
-    }
-    
-    return result;
+    return this.blockedFilter.filter(result);
   }
 }
 

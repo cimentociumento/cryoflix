@@ -3,6 +3,9 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# OpenSSL é exigido pelos engines nativos do Prisma; Alpine não o inclui por padrão
+RUN apk add --no-cache openssl
+
 # Install all dependencies (devDeps needed for TypeScript compilation)
 COPY package*.json ./
 COPY prisma ./prisma/
@@ -42,6 +45,9 @@ FROM node:22-alpine AS production
 WORKDIR /app
 
 ENV NODE_ENV=production
+
+# OpenSSL é exigido pelos engines nativos do Prisma; Alpine não o inclui por padrão
+RUN apk add --no-cache openssl
 
 # Install production dependencies only
 COPY package*.json ./

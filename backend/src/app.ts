@@ -8,6 +8,7 @@ import { swaggerOptions } from './shared/docs/swagger.config';
 import { StatusCodes } from 'http-status-codes';
 import { ZodError, ZodIssue } from 'zod';
 import { apiRouter } from './routes';
+import { env } from './config/environment';
 import { logger } from './shared/utils/logger';
 import { StatusCodes as Http } from 'http-status-codes';
 import { ValidationError } from './shared/domain/errors/ValidationError';
@@ -19,12 +20,15 @@ import { HttpClientError } from './shared/infrastructure/http/HttpClientError';
 export const createApp = () => {
   const app = express();
 
+  const allowedOrigins = [env.frontendUrl, env.adminUrl];
   app.use(
     cors({
-      origin: true,
+      origin: allowedOrigins,
       credentials: true,
     }),
   );
+  // Vercel proxy: req.ip vem do X-Forwarded-For (rate limit por usuário, não global).
+  app.set('trust proxy', 1);
   app.use(helmet());
   app.use(cookieParser());
   app.use(express.json({ limit: '10mb' }));
@@ -109,3 +113,6 @@ export const createApp = () => {
   return app;
 };
 
+
+// Vercel (Express preset) uses src/app.ts as entrypoint and requires a default export.
+export default createApp();

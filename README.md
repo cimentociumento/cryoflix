@@ -5,6 +5,15 @@ Monorepo contendo:
 - `backend/`: API Node.js + Express + TypeScript organizada por domínio (DDD) e exposta via API Gateway REST.
 - `frontend/`: Single Page Application em React + Vite + TypeScript para visualizar roadmap, microserviços e contratos REST.
 
+## Tecnologias Utilizadas
+
+- **Linguagens e runtime**: TypeScript, JavaScript, Node.js.
+- **Frontend**: React, React DOM, React Router DOM, TanStack React Query, Vite (Rolldown), ESLint.
+- **Backend**: Express, CORS, Helmet, Express Rate Limit, JSON Web Token, BcryptJS, Multer, Zod, Axios, Node Fetch, Dotenv, UUID, Pino.
+- **Cache e infraestrutura**: Redis (ioredis) com fallback para cache em memoria.
+- **Integracoes externas**: The Movie Database (TMDB), SuperEmbed, OpenSubtitles.
+- **Qualidade e testes**: Jest, Supertest, ts-jest, ts-node, ts-node-dev, TypeScript ESLint.
+
 ## Requisitos Atendidos
 
 - Microsserviços principais (Auth, User, Content, Upload, Transcoding, Streaming, Payment, Recommendation, Analytics, Notification).

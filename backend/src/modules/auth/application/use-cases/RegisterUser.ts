@@ -41,8 +41,10 @@ export class RegisterUserUseCase {
 
     const username = await this.allocateUsername(email);
     const passwordHash = await bcrypt.hash(dto.password, 12);
-    const verifyToken = randomUUID();
-    const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    // Sem SMTP o e-mail de verificação nunca chega: a conta já nasce verificada.
+    const requiresVerification = this.emailService.isConfigured();
+    const verifyToken = requiresVerification ? randomUUID() : null;
+    const verifyExpires = requiresVerification ? new Date(Date.now() + 24 * 60 * 60 * 1000) : null;
 
     const user = User.create({
       email,
@@ -52,8 +54,8 @@ export class RegisterUserUseCase {
       bio: null,
       passwordHash,
       role: 'USER',
-      status: 'PENDING_VERIFICATION',
-      emailVerified: false,
+      status: requiresVerification ? 'PENDING_VERIFICATION' : 'ACTIVE',
+      emailVerified: !requiresVerification,
       emailVerifyToken: verifyToken,
       emailVerifyExpires: verifyExpires,
       passwordResetToken: null,
@@ -68,7 +70,7 @@ export class RegisterUserUseCase {
 
     const created = await this.userRepository.create(user);
 
-    if (process.env.NODE_ENV !== 'test') {
+    if (verifyToken && process.env.NODE_ENV !== 'test') {
       await this.emailService.sendVerificationEmail(created.email, verifyToken);
     }
 

@@ -1,6 +1,7 @@
 import { IMovieRepository } from '../../domain/repositories/IMovieRepository';
 import { Movie } from '../../domain/entities/Movie';
 import { ICacheProvider } from '../../../../shared/infrastructure/cache';
+import { BlockedMoviesFilter } from '../../infrastructure/services/BlockedMoviesFilter';
 import { ValidationError } from '../../../../shared/domain/errors/ValidationError';
 import { logger } from '../../../../shared/utils/logger';
 
@@ -14,6 +15,7 @@ export class GetRecommendations {
   constructor(
     private readonly repository: IMovieRepository,
     private readonly cache: ICacheProvider,
+    private readonly blockedFilter: BlockedMoviesFilter,
   ) {}
 
   async execute({ movieId }: Params): Promise<Movie[]> {
@@ -23,9 +25,11 @@ export class GetRecommendations {
 
     const cacheKey = `metadata:recommendations:${movieId}`;
     const cached = await this.cache.get<any>(cacheKey);
+    let movies: Movie[];
+
     if (cached && Array.isArray(cached) && cached.length > 0) {
       // Restaurar entidades Movie do cache
-      return cached.map((item: any) => {
+      movies = cached.map((item: any) => {
         if (item instanceof Movie) {
           return item;
         }
@@ -44,21 +48,21 @@ export class GetRecommendations {
           String(item.tmdbId || item.id),
         );
       });
+    } else {
+      movies = await this.repository.getRecommendations(movieId);
+      logger.debug({ movieId, count: movies.length }, 'GetRecommendations: resultados da busca');
+
+      // Armazenar JSONs no cache, não instâncias
+      if (movies.length > 0) {
+        await this.cache.set(
+          cacheKey,
+          movies.map((movie) => movie.toJSON()),
+          GetRecommendations.CACHE_TTL,
+        );
+      }
     }
 
-    const movies = await this.repository.getRecommendations(movieId);
-    logger.debug({ movieId, count: movies.length }, 'GetRecommendations: resultados da busca');
-    
-    // Armazenar JSONs no cache, não instâncias
-    if (movies.length > 0) {
-      await this.cache.set(
-        cacheKey,
-        movies.map((movie) => movie.toJSON()),
-        GetRecommendations.CACHE_TTL,
-      );
-    }
-    
-    return movies;
+    return this.blockedFilter.filter(movies);
   }
 }
 

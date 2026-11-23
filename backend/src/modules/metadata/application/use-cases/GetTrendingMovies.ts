@@ -1,6 +1,7 @@
 import { IMovieRepository } from '../../domain/repositories/IMovieRepository';
 import { Movie } from '../../domain/entities/Movie';
 import { ICacheProvider } from '../../../../shared/infrastructure/cache';
+import { BlockedMoviesFilter } from '../../infrastructure/services/BlockedMoviesFilter';
 import { logger } from '../../../../shared/utils/logger';
 
 export class GetTrendingMovies {
@@ -9,14 +10,17 @@ export class GetTrendingMovies {
   constructor(
     private readonly repository: IMovieRepository,
     private readonly cache: ICacheProvider,
+    private readonly blockedFilter: BlockedMoviesFilter,
   ) {}
 
   async execute(): Promise<Movie[]> {
     const cacheKey = 'metadata:trending';
     const cached = await this.cache.get<any>(cacheKey);
+    let movies: Movie[];
+
     if (cached && Array.isArray(cached) && cached.length > 0) {
       // Restaurar entidades Movie do cache
-      return cached.map((item: any) => {
+      movies = cached.map((item: any) => {
         if (item instanceof Movie) {
           return item;
         }
@@ -35,21 +39,21 @@ export class GetTrendingMovies {
           String(item.tmdbId || item.id),
         );
       });
+    } else {
+      movies = await this.repository.getTrending();
+      logger.debug({ count: movies.length }, 'GetTrendingMovies: resultados da busca');
+
+      // Armazenar JSONs no cache, não instâncias
+      if (movies.length > 0) {
+        await this.cache.set(
+          cacheKey,
+          movies.map((movie) => movie.toJSON()),
+          GetTrendingMovies.CACHE_TTL,
+        );
+      }
     }
 
-    const movies = await this.repository.getTrending();
-    logger.debug({ count: movies.length }, 'GetTrendingMovies: resultados da busca');
-    
-    // Armazenar JSONs no cache, não instâncias
-    if (movies.length > 0) {
-      await this.cache.set(
-        cacheKey,
-        movies.map((movie) => movie.toJSON()),
-        GetTrendingMovies.CACHE_TTL,
-      );
-    }
-    
-    return movies;
+    return this.blockedFilter.filter(movies);
   }
 }
 

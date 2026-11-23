@@ -1,11 +1,12 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, ScrollText, LogOut, Menu } from 'lucide-react';
+import { LayoutDashboard, Users, ScrollText, LogOut, Menu, Film } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 
 const nav = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/users', label: 'Usuários', icon: Users },
+  { to: '/movies', label: 'Filmes', icon: Film },
   { to: '/audit', label: 'Auditoria', icon: ScrollText },
 ];
 

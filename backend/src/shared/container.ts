@@ -10,6 +10,7 @@ import { IRefreshTokenRepository } from '../modules/auth/domain/repositories/IRe
 import { TMDbClient } from '../modules/metadata/infrastructure/http/TMDbClient';
 import { MovieRepository } from '../modules/metadata/infrastructure/repositories/MovieRepository';
 import { IMovieRepository } from '../modules/metadata/domain/repositories/IMovieRepository';
+import { BlockedMoviesFilter } from '../modules/metadata/infrastructure/services/BlockedMoviesFilter';
 import { OpenSubtitlesAdapter } from '../modules/subtitle/infrastructure/adapters/OpenSubtitlesAdapter';
 import { SubtitleRepository } from '../modules/subtitle/infrastructure/repositories/SubtitleRepository';
 import { ISubtitleRepository } from '../modules/subtitle/domain/repositories/ISubtitleRepository';
@@ -41,6 +42,7 @@ const superEmbedAdapter = new SuperEmbedAdapter();
 const cacheProvider: ICacheProvider = getCacheProvider();
 
 const movieRepository: IMovieRepository = new MovieRepository(tmdbClient);
+const blockedMoviesFilter = new BlockedMoviesFilter(usePrisma ? prisma : null);
 const subtitleRepository: ISubtitleRepository = new SubtitleRepository(openSubtitlesAdapter);
 const playerRepository: IPlayerRepository = usePrisma
   ? new PlayerRepository(superEmbedAdapter, prisma, userRepository)
@@ -53,6 +55,7 @@ export const container = {
   tokenService,
   emailService,
   movieRepository,
+  blockedMoviesFilter,
   tmdbClient,
   subtitleRepository,
   openSubtitlesAdapter,

@@ -1,6 +1,5 @@
 import { Button } from '../../../shared/components/Button/Button';
 import { superFlixApiService } from '../../../services/api/superFlixApiService';
-import styles from './PlayerApiSelector.module.css';
 
 export type StreamingApi = 'superembed' | 'superflix' | 'letsembed';
 
@@ -36,18 +35,21 @@ export const PlayerApiSelector = ({
   const letsEmbedUrl = getLetsEmbedUrl();
 
   return (
-    <div className={styles.container}>
-      <p className={styles.description}>
-        Escolha uma das APIs de streaming disponíveis para assistir <strong>{movieTitle}</strong>:
+    <div className="flex flex-col gap-6">
+      <p className="m-0 leading-relaxed text-smoke">
+        Escolha uma das APIs de streaming disponíveis para assistir{' '}
+        <strong className="font-semibold text-bone">{movieTitle}</strong>:
       </p>
 
-      <div className={styles.options}>
-        <div className={styles.option}>
-          <div className={styles.optionHeader}>
-            <h3>SuperEmbed</h3>
-            <span className={styles.badge}>Recomendado</span>
+      <div className="flex flex-col gap-4">
+        <div className="rounded-xl border border-white/10 bg-white/5 p-5 transition-colors hover:bg-white/10">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="m-0 text-lg font-semibold text-bone">SuperEmbed</h3>
+            <span className="rounded-full bg-marquee px-3 py-1 text-xs font-semibold uppercase tracking-wide text-bone">
+              Recomendado
+            </span>
           </div>
-          <p className={styles.optionDescription}>
+          <p className="m-0 text-sm leading-relaxed text-smoke">
             Player VIP com múltiplas qualidades, HLS rápido e legendas integradas.
           </p>
           <Button
@@ -61,12 +63,14 @@ export const PlayerApiSelector = ({
         </div>
 
         {hasSuperFlix ? (
-          <div className={styles.option}>
-            <div className={styles.optionHeader}>
-              <h3>SuperFlix API</h3>
-              <span className={styles.badge}>Dublado</span>
+          <div className="rounded-xl border border-white/10 bg-white/5 p-5 transition-colors hover:bg-white/10">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="m-0 text-lg font-semibold text-bone">SuperFlix API</h3>
+              <span className="rounded-full bg-marquee px-3 py-1 text-xs font-semibold uppercase tracking-wide text-bone">
+                Dublado
+              </span>
             </div>
-            <p className={styles.optionDescription}>
+            <p className="m-0 text-sm leading-relaxed text-smoke">
               Catálogo completo de filmes, séries e animes dublados em português com alta qualidade. Suporta personalização do player.
             </p>
             <Button
@@ -80,12 +84,14 @@ export const PlayerApiSelector = ({
             </Button>
           </div>
         ) : (
-          <div className={styles.option}>
-            <div className={styles.optionHeader}>
-              <h3>SuperFlix API</h3>
-              <span className={styles.badgeDisabled}>Indisponível</span>
+          <div className="rounded-xl border border-white/10 bg-white/5 p-5 transition-colors hover:bg-white/10">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="m-0 text-lg font-semibold text-bone">SuperFlix API</h3>
+              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-smoke">
+                Indisponível
+              </span>
             </div>
-            <p className={styles.optionDescription}>
+            <p className="m-0 text-sm leading-relaxed text-smoke">
               Requer IMDb ID para acessar. Este filme não possui identificador IMDb disponível.
             </p>
             <Button
@@ -98,12 +104,14 @@ export const PlayerApiSelector = ({
           </div>
         )}
 
-        <div className={styles.option}>
-          <div className={styles.optionHeader}>
-            <h3>LetsEmbed</h3>
-            <span className={styles.badge}>Dublado</span>
+        <div className="rounded-xl border border-white/10 bg-white/5 p-5 transition-colors hover:bg-white/10">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="m-0 text-lg font-semibold text-bone">LetsEmbed</h3>
+            <span className="rounded-full bg-marquee px-3 py-1 text-xs font-semibold uppercase tracking-wide text-bone">
+              Dublado
+            </span>
           </div>
-          <p className={styles.optionDescription}>
+          <p className="m-0 text-sm leading-relaxed text-smoke">
             Player com seleção de idioma para conteúdo dublado em português. Suporta múltiplas qualidades.
           </p>
           <Button
@@ -118,7 +126,7 @@ export const PlayerApiSelector = ({
         </div>
       </div>
 
-      <div className={styles.footer}>
+      <div className="mt-2">
         <Button variant="secondary" onClick={onClose} style={{ width: '100%' }}>
           Cancelar
         </Button>

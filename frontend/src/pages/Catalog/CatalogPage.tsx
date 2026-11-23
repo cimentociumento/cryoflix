@@ -58,18 +58,24 @@ export const CatalogPage = () => {
   });
 
   return (
-    <div className="page-stack">
-      <header className="catalog-header">
+    <div className="flex flex-col gap-8">
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1>Catálogo</h1>
-          <p>Busca em tempo real no TMDb.</p>
+          <h1 className="font-display text-3xl text-bone">Catálogo</h1>
+          <p className="text-sm text-smoke">Busca em tempo real no TMDb.</p>
         </div>
-        <input
-          className="search-input"
-          placeholder="Buscar filmes (ex: Inception, Matrix)"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+        <div className="flex flex-col gap-1">
+          <label htmlFor="catalog-search" className="text-xs text-smoke">
+            Buscar filmes
+          </label>
+          <input
+            id="catalog-search"
+            className="rounded-full border border-white/10 bg-velvet px-4 py-2 text-bone placeholder:text-smoke focus-visible:outline focus-visible:outline-2 focus-visible:outline-marquee"
+            placeholder="Ex: Inception, Matrix"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
       </header>
       {!query && user ? (
         <Section
@@ -81,20 +87,22 @@ export const CatalogPage = () => {
           }
         >
           {fetchingRecommended ? (
-            [...Array(4)].map((_, index) => <div className="skeleton-card" key={index} />)
+            [...Array(4)].map((_, index) => (
+              <div className="aspect-[2/3] animate-pulse rounded-lg bg-velvet" key={index} />
+            ))
           ) : recommended.length ? (
             recommended.slice(0, 8).map((movie) => <VideoCard key={movie.id} video={movie} />)
           ) : (
-            <div className="auth-panel">
-              <p style={{ margin: 0, opacity: 0.8 }}>
+            <div className="rounded-xl border border-white/10 bg-velvet p-6">
+              <p className="text-sm text-smoke">
                 Ainda não há recomendações. Conclua um título e volte aqui.
               </p>
             </div>
           )}
         </Section>
       ) : null}
-      {isFetching ? <p>Carregando conteúdo...</p> : null}
-      <div className="catalog-grid">
+      {isFetching ? <p className="text-sm text-smoke">Carregando conteúdo...</p> : null}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {visibleMovies.map((movie) => (
           <div key={movie.id}>
             <VideoCard video={movie} />
@@ -111,7 +119,9 @@ export const CatalogPage = () => {
           </div>
         ))}
         {!visibleMovies.length && !isFetching ? (
-          <p>{query ? 'Nenhum filme encontrado. Tente outra busca.' : 'Digite um termo para buscar filmes.'}</p>
+          <p className="text-sm text-smoke">
+            {query ? 'Nenhum filme encontrado. Tente outra busca.' : 'Digite um termo para buscar filmes.'}
+          </p>
         ) : null}
       </div>
     </div>

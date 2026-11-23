@@ -34,6 +34,24 @@ export interface DashboardStats {
   newUsersLast30Days: { date: string; count: number }[];
 }
 
+export interface BlockedMovie {
+  id: string;
+  tmdbId: number;
+  title: string;
+  posterPath?: string | null;
+  reason?: string | null;
+  createdAt: string;
+  blockedBy?: { id: string; username: string; email: string } | null;
+}
+
+export interface MovieSearchResult {
+  id: number;
+  title: string;
+  posterUrl: string | null;
+  releaseDate: string | null;
+  voteAverage: number;
+}
+
 export interface AuditLog {
   id: string;
   userId?: string | null;

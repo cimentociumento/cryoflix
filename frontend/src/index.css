@@ -1,13 +1,37 @@
+@import "tailwindcss";
+
+/* Tokens do DESIGN.md — disponíveis como utilities (bg-ink, text-marquee, font-display, etc.) */
+@theme {
+  --color-ink: #0b0b0f;
+  --color-velvet: #15131c;
+  --color-smoke: #8a8699;
+  --color-bone: #f5f3ec;
+  --color-marquee: #ff3d5a;
+  --color-gold: #e9b872;
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --font-body: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --animate-fade-in: fade-in 300ms ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 :root {
-  font-family: 'Space Grotesk', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-body);
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #071625;
-  background: radial-gradient(circle at top, #ffffff, #f0f6ff 55%);
+  color: var(--color-bone);
+  background: var(--color-ink);
 }
 
 *,
@@ -19,10 +43,8 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at 18% 22%, rgba(27, 110, 234, 0.18), transparent 52%),
-    radial-gradient(circle at 82% 10%, rgba(3, 196, 255, 0.14), transparent 48%),
-    radial-gradient(circle at 55% 85%, rgba(143, 182, 255, 0.2), transparent 55%),
-    #f7fbff;
+  color: var(--color-bone);
+  background: var(--color-ink);
 }
 
 a {

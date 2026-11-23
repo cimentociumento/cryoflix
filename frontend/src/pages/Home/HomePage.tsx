@@ -19,7 +19,7 @@ export const HomePage = () => {
   const featured = trending[0];
 
   return (
-    <div className="page-stack">
+    <div className="flex flex-col gap-12">
       <Hero
         title="Assista aos lançamentos e continue exatamente de onde parou."
         description="Streaming adaptativo, múltiplos perfis e recomendações inteligentes prontos para o próximo grande lançamento."
@@ -30,27 +30,33 @@ export const HomePage = () => {
           ) : null
         }
       />
-      <div className="home-grid">
-        <div>
-          <Section title="Em Alta" description="Filmes populares do TMDb.">
-            {loadingTrending
-              ? [...Array(4)].map((_, index) => (
-                  <div className="skeleton-card" key={index} />
-                ))
-              : trending.map((movie) => <VideoCard key={movie.id} video={movie} />)}
-          </Section>
-        </div>
+      <div className="grid gap-8 lg:grid-cols-[2fr_1fr] lg:items-start">
+        <Section title="Em Alta" description="Filmes populares do TMDb.">
+          {loadingTrending
+            ? [...Array(4)].map((_, index) => (
+                <div className="aspect-[2/3] animate-pulse rounded-lg bg-velvet" key={index} />
+              ))
+            : trending.map((movie) => <VideoCard key={movie.id} video={movie} />)}
+        </Section>
         {!user ? (
-          <aside className="auth-panel">
-            <h3>Entrar ou criar conta</h3>
-            <p>Use o e-mail demo ou cadastre um novo streaming user.</p>
-            <LoginForm />
+          <aside className="rounded-xl border border-white/10 bg-velvet p-6">
+            <h3 className="font-display text-xl text-bone">Entrar ou criar conta</h3>
+            <p className="mt-1 text-sm text-smoke">
+              Use o e-mail demo ou cadastre um novo streaming user.
+            </p>
+            <div className="mt-4">
+              <LoginForm />
+            </div>
           </aside>
         ) : (
-          <aside className="auth-panel">
-            <h3>Bem-vindo, {user.name}</h3>
-            <p>Escolha um título para continuar assistindo.</p>
-            {featured ? <VideoCard video={featured} subtitle="Destaque do momento" /> : null}
+          <aside className="rounded-xl border border-white/10 bg-velvet p-6">
+            <h3 className="font-display text-xl text-bone">Bem-vindo, {user.name}</h3>
+            <p className="mt-1 text-sm text-smoke">Escolha um título para continuar assistindo.</p>
+            {featured ? (
+              <div className="mt-4 w-40">
+                <VideoCard video={featured} subtitle="Destaque do momento" />
+              </div>
+            ) : null}
           </aside>
         )}
       </div>

@@ -11,9 +11,13 @@ import { UpdateUserRoleUseCase } from '../../application/use-cases/UpdateUserRol
 import { UpdateUserStatusUseCase } from '../../application/use-cases/UpdateUserStatus';
 import { DeleteUserUseCase } from '../../application/use-cases/DeleteUser';
 import { GetAuditLogsUseCase } from '../../application/use-cases/GetAuditLogs';
+import { ListBlockedMoviesUseCase } from '../../application/use-cases/ListBlockedMovies';
+import { BlockMovieUseCase } from '../../application/use-cases/BlockMovie';
+import { UnblockMovieUseCase } from '../../application/use-cases/UnblockMovie';
 import { AdminDashboardController } from '../controllers/AdminDashboardController';
 import { AdminUserController } from '../controllers/AdminUserController';
 import { AdminAuditController } from '../controllers/AdminAuditController';
+import { AdminMovieController } from '../controllers/AdminMovieController';
 
 const requireDb = (req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => {
   if (!process.env.DATABASE_URL?.trim()) {
@@ -30,6 +34,9 @@ const updateUserRole = new UpdateUserRoleUseCase(container.prisma);
 const updateUserStatus = new UpdateUserStatusUseCase(container.prisma);
 const deleteUser = new DeleteUserUseCase(container.prisma);
 const getAuditLogs = new GetAuditLogsUseCase(container.prisma);
+const listBlockedMovies = new ListBlockedMoviesUseCase(container.prisma);
+const blockMovie = new BlockMovieUseCase(container.prisma);
+const unblockMovie = new UnblockMovieUseCase(container.prisma);
 
 const dashboardController = new AdminDashboardController(getDashboardStats);
 const userController = new AdminUserController(
@@ -40,6 +47,7 @@ const userController = new AdminUserController(
   deleteUser,
 );
 const auditController = new AdminAuditController(getAuditLogs);
+const movieController = new AdminMovieController(listBlockedMovies, blockMovie, unblockMovie);
 
 export const adminRoutes = Router();
 
@@ -54,3 +62,7 @@ adminRoutes.patch('/users/:id/role', logAudit('ROLE_CHANGE'), safeHandler(userCo
 adminRoutes.patch('/users/:id/status', logAudit('STATUS_CHANGE'), safeHandler(userController.patchStatus));
 adminRoutes.delete('/users/:id', logAudit('USER_DELETE'), safeHandler(userController.remove));
 adminRoutes.get('/audit-logs', safeHandler(auditController.list));
+
+adminRoutes.get('/blocked-movies', safeHandler(movieController.list));
+adminRoutes.post('/blocked-movies', logAudit('MOVIE_BLOCK'), safeHandler(movieController.block));
+adminRoutes.delete('/blocked-movies/:tmdbId', logAudit('MOVIE_UNBLOCK'), safeHandler(movieController.unblock));

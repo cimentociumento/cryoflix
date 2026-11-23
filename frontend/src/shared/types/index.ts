@@ -60,6 +60,10 @@ export type WatchProgress = {
   updatedAt?: string;
 };
 
+export type BrazilianDubInfo = {
+  hasBrazilianDub: boolean;
+};
+
 export type SubtitleOption = {
   id: string;
   language: string;

@@ -11,20 +11,25 @@
 }
 
 .primary {
-  background: linear-gradient(135deg, #1b6eea, #03c4ff);
-  color: #fff;
-  box-shadow: 0 10px 25px rgba(18, 75, 158, 0.35);
+  background: var(--color-marquee);
+  color: var(--color-bone);
+  box-shadow: 0 10px 25px rgba(255, 61, 90, 0.3);
 }
 
 .secondary {
-  background: #ffffff;
-  color: #1b365d;
-  border: 1px solid rgba(26, 82, 178, 0.22);
+  background: transparent;
+  color: var(--color-bone);
+  border: 1px solid rgba(245, 243, 236, 0.25);
 }
 
 .button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(9, 30, 66, 0.2);
+  box-shadow: 0 12px 30px rgba(255, 61, 90, 0.25);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-marquee);
+  outline-offset: 2px;
 }
 
 .button:disabled {

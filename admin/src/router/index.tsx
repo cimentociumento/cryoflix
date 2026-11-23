@@ -5,6 +5,7 @@ import { DashboardPage } from '../pages/dashboard/DashboardPage';
 import { UsersPage } from '../pages/users/UsersPage';
 import { UserDetailPage } from '../pages/users/UserDetailPage';
 import { AuditLogPage } from '../pages/audit/AuditLogPage';
+import { BlockedMoviesPage } from '../pages/movies/BlockedMoviesPage';
 import { UnauthorizedPage } from '../pages/UnauthorizedPage';
 import { AppShell } from '../components/layout/AppShell';
 
@@ -20,6 +21,7 @@ export const AppRouter = () => (
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/users" element={<UsersPage />} />
         <Route path="/users/:id" element={<UserDetailPage />} />
+        <Route path="/movies" element={<BlockedMoviesPage />} />
         <Route path="/audit" element={<AuditLogPage />} />
       </Route>
     </Route>

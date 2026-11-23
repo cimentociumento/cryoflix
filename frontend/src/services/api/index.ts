@@ -5,6 +5,5 @@ export * from './userService';
 export * from './metadataService';
 export * from './playerService';
 export * from './subtitleService';
-export * from './tmdbService';
 export * from './superFlixApiService';
 

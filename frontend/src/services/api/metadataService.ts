@@ -1,5 +1,5 @@
 import { httpClient } from '../../shared/api/httpClient';
-import type { MovieMetadata } from '../../shared/types';
+import type { BrazilianDubInfo, MovieMetadata } from '../../shared/types';
 
 export const metadataService = {
   async search(query: string, page = 1) {
@@ -14,6 +14,9 @@ export const metadataService = {
   },
   async getRecommendations(id: number) {
     return httpClient<MovieMetadata[]>(`/metadata/${id}/recommendations`);
+  },
+  async getBrazilianDubInfo(id: number) {
+    return httpClient<BrazilianDubInfo>(`/metadata/${id}/brazilian-dub`);
   },
 };
 

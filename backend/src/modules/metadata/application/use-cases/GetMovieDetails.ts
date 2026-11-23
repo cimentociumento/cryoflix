@@ -1,6 +1,7 @@
 import { IMovieRepository } from '../../domain/repositories/IMovieRepository';
 import { Movie } from '../../domain/entities/Movie';
 import { ICacheProvider } from '../../../../shared/infrastructure/cache';
+import { BlockedMoviesFilter } from '../../infrastructure/services/BlockedMoviesFilter';
 import { ValidationError } from '../../../../shared/domain/errors/ValidationError';
 import { NotFoundError } from '../../../../shared/domain/errors/NotFoundError';
 
@@ -14,11 +15,16 @@ export class GetMovieDetails {
   constructor(
     private readonly repository: IMovieRepository,
     private readonly cache: ICacheProvider,
+    private readonly blockedFilter: BlockedMoviesFilter,
   ) {}
 
   async execute({ id }: Params): Promise<Movie> {
     if (!Number.isFinite(id) || id <= 0) {
       throw new ValidationError('ID de filme inválido');
+    }
+
+    if (await this.blockedFilter.isBlocked(id)) {
+      throw new NotFoundError('Filme', id);
     }
 
     const cacheKey = `metadata:movie:${id}`;

@@ -7,14 +7,14 @@ type SectionProps = {
 };
 
 export const Section = ({ title, description, children }: SectionProps) => (
-  <section className="content-section">
+  <section className="flex flex-col gap-4">
     <header>
-      <div>
-        <h2>{title}</h2>
-        {description ? <p>{description}</p> : null}
-      </div>
+      <h2 className="text-xs font-semibold uppercase tracking-[0.25em] text-smoke">{title}</h2>
+      {description ? <p className="mt-1 text-sm text-smoke/70">{description}</p> : null}
     </header>
-    <div className="section-grid">{children}</div>
+    <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [&>*]:w-[42vw] [&>*]:shrink-0 [&>*]:snap-start sm:[&>*]:w-56">
+      {children}
+    </div>
   </section>
 );
 

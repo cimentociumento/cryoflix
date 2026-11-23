@@ -22,6 +22,20 @@ export type TMDbExternalIds = {
   wikidata_id?: string | null;
 };
 
+export type TMDbReleaseDatesResponse = {
+  id: number;
+  results: Array<{
+    iso_3166_1: string;
+    release_dates: Array<{
+      certification: string;
+      iso_639_1: string | null;
+      release_date: string;
+      type: number;
+      note?: string;
+    }>;
+  }>;
+};
+
 export type TMDbMovie = {
   id: number;
   title: string;
@@ -161,6 +175,30 @@ export class TMDbClient {
         data: error.cause,
       }, 'TMDb getTrending error');
       return [];
+    }
+  }
+
+  async getReleaseDates(id: number): Promise<TMDbReleaseDatesResponse | null> {
+    const http = this.http;
+    if (!http) {
+      logger.error({ id }, 'TMDb indisponível: API key ausente');
+      return null;
+    }
+    try {
+      const response = await http.get<TMDbReleaseDatesResponse>(`/movie/${id}/release_dates`);
+      if (!response || !Array.isArray(response.results)) {
+        logger.warn({ id, response }, 'TMDb getReleaseDates: resposta inválida');
+        return null;
+      }
+      return response;
+    } catch (error: any) {
+      logger.error({
+        id,
+        message: error.message,
+        status: error.status,
+        data: error.cause,
+      }, 'TMDb getReleaseDates error');
+      return null;
     }
   }
 

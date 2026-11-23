@@ -61,6 +61,7 @@ model User {
   // Relações
   refreshTokens         RefreshToken[]
   auditLogs             AuditLog[]
+  blockedMovies         BlockedMovie[]
 
   @@map("users")
 }
@@ -103,6 +104,19 @@ model WatchProgress {
 
   @@unique([userId, movieId])
   @@map("watch_progress")
+}
+
+model BlockedMovie {
+  id          String   @id @default(uuid())
+  tmdbId      Int      @unique
+  title       String
+  posterPath  String?
+  reason      String?
+  blockedById String?
+  blockedBy   User?    @relation(fields: [blockedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@map("blocked_movies")
 }
 
 model AuditLog {
